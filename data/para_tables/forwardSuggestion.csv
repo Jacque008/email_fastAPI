@@ -1,0 +1,67 @@
+id,action,templates
+1,Trim,"Om du har några frågor angående detta mejl, är du välkommen att kontakta oss på Sveland"
+2,Trim,Svara till djurskador@if.se vid eventuella frågor om detta mejl.
+3,Trim,"Wisentic AB, Körsbärsvägen 5,\n114 23 Stockholm, Sweden"
+4,Trim,\(detta mejl går inte att svara på då hamnar det i fel e\-postkorg\)
+5,Trim,Obs! Vi sparar inte underlag vi ej kan åtgärda\/reglera
+6,Trim,OBS!! Vi sparar ej underlag vi ej kan handlägga
+7,Trim,Svara gärna tillbaka i denna tråd
+8,Trim,Har du några frågor eller vill diskutera ärendet är du välkommen att ringa telefonnummer
+9,Trim,"Vi vill göra er uppmärksamma på att If, enligt försäkringsvillkoret, har rätt att ta del av djurets journaler"
+10,Trim,Har ni några frågor eller vill diskutera ärendet är (ni|du) välkomna att ringa
+11,Trim,Märk med Komplettering av direktreglering
+12,Trim,Vi vore tacksamma om ni kunde mejla det till folksam\.edjur@wisentic\.com
+13,Trim,"OBS! Detta mejl går inte att svara på, var vänliga och skicka till folksam.edjur@wisentic\.com"
+14,Trim,Vi önskar (er|dig) en (trevlig|fortsatt bra)?\s*dag
+15,Trim,Ser fram emot ert svar
+16,Trim,Tack på förhand
+17,Trim,Ha en (fortsatt )?fin dag
+18,Trim,Ha det fint!
+19,Trim,Vänligen återkom så kikar vi vidare på reglering
+20,Trim,Vi återkommer så fort vi fått svar
+21,Trim,"\n(?:Med|Varma)\s+(?:vänliga?|Vänliga?)?\s+(?:hälsning|Hälsning|hälsningar|Hälsningar)?,?"
+22,Trim,"\n(?:vänliga?|Vänliga?)\s+(?:hälsninga?r?|Hälsninga?r?)?,?"
+23,Trim,"\n(Hälsning|Hälsningar|Häslningar|Trevlig helg|Best regards),?\s"
+24,Trim,"\n(Vänligen|Hälsar),?\n"
+25,Trim,"\nVänligen,\s"
+26,Trim,"\n(M|m)[V|v](H|h),?\s"
+27,Trim,\n\n/ [A-ZÅÖÄ]
+28,Trim,Agnes Rudin
+29,Trim,Teamet på Hedvig
+30,Trim,Djurskador\s+Telefon: 033-78 60 502
+31,Trim,----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+32,Trim,Aniuma Vetcentrum AB\nOrg\.nr:559425\-6603\nMagasinstgatan 9A\n903 27 Umeå
+33,Trim,Receptionen\nDjurvårdare nivå 2
+34,Trim,Tel: 046\-260 55 00\s+Mail: hej@nordicvet\.net\s+www\.nordicvet\.net
+35,Trim,/Veterinär Ina Lindblom
+36,Trim,Oljevägen 11
+37,Trim,(?:\[cid:[\w-]+\]\s+)?Veterinär Kämpaslätten\s+Galjalyckevägen 5
+38,Forward_Address,Vidarebefordrat meddelande [\-]+\s*(?:Från|From):\s*(.*?)\s*(?:Datum|Date):
+39,Forward_Subject,(?i)^Märk(?!.*betalningen).*?med:?\s*(.*?)(?=\n|$)
+40,Forward_Subject,"Det går bra att svara på detta mejl eller till djurskador@svedea\.se, (?i)märk mejlsvaret med\s+(.+?)\s*(?=\s+eller\b|[.,;:!?]|[\r\n]|$)"
+41,Subject,(?:\b(?:SV:|RE:)\s*\b)*(.*)
+42,ProvetCloud_Msg,\nMeddelande: (.*?)\nDu hittar patienthistoriken som en bifogad PDF fil
+43,ProvetCloud_Clinic,\[BODY\](.*?)\s+Logo
+44,ProvetCloud_Recipient,Vänligen vidarebefordra till ((?!försäkringsbolaget)[a-zåöä ]+?)\n*Mvh?
+45,Wisentic_Msg,Ämne:.*?\n(.*?)\nDatum:.*?Från:.*?Till:.*?Ämne:
+46,Wisentic_Error_Subject,Info från försäkringsbolaget: Direktreglering {REFERENCE} behöver kompletteras
+47,Wisentic_Error_Template,"Hej,<br><br>Här kommer information om en direktreglering som inte kan hanteras av försäkringsbolaget. Dubbelkolla försäkringsuppgifterna med DÄ, och uppdatera i journalsystemet om aktuellt. Skicka de rätta uppgifterna till oss så uppdaterar vi ärendet och skickar om det till {WHO}.<br><br>""<b><i>{EMAIL}</i></b>""<br><br>Om ni inte får tag på nya försäkringsuppgifter har ni två alternativ:<br><li>vi sätter 0 kr ersättning (då betalar DÄ faktura + direktregleringsavgift i DRP)</li><li>vi avbryter direktregleringen (då driver ni själva in pengar från DÄ utanför DRP)</li><br><br>Tack på förhand!{INFO}<br><br><br>Mvh {ADMIN}<br>DRP"
+48,Insurance_Validation_Error_Subject,Info från försäkringsbolaget: Direktreglering {REFERENCE} behöver kompletteras
+49,Insurance_Validation_Error_Template,"Hej,<br><br>Här kommer information om en direktreglering som inte kan hanteras av försäkringsbolaget. Dubbelkolla försäkringsuppgifterna med DÄ, och uppdatera i journalsystemet om aktuellt. Skicka de rätta uppgifterna till oss så uppdaterar vi ärendet och skickar om det till {WHO}.<br><br>""<b><i>{EMAIL}</i></b>""<br><br>Om ni inte får tag på nya försäkringsuppgifter har ni två alternativ:<br><li>vi sätter 0 kr ersättning (då betalar DÄ faktura + direktregleringsavgift i DRP)</li><li>vi avbryter direktregleringen (då driver ni själva in pengar från DÄ utanför DRP)</li><br><br>Tack på förhand!{INFO}<br><br><br>Mvh {ADMIN}<br>DRP"
+50,Complement_DR_Insurance_Company_Subject,Info från försäkringsbolaget: Direktreglering {REFERENCE} behöver kompletteras
+51,Complement_DR_Insurance_Company_Template,"Hej,<br><br>Här kommer önskemål om komplettering av en direktreglering. Svara på detta mail eller skicka ett mail med kompletteringen till {REFERENCE} så vidarebefordrar vi det till {WHO}.<br><br>""<b><i>{EMAIL}</i></b>""<br><br>Tack på förhand!{INFO}<br><br><br>Mvh {ADMIN}<br>DRP"
+52,Complement_DR_Clinic_Subject,Komplettering av direktreglering {REFERENCE}
+53,Complement_DR_Clinic_Template,"Hej,<br><br>Här kommer svar på efterfrågad komplettering från {WHO}.<br><br>""<b><i>{EMAIL}</i></b>""<br><br>Hör gärna av er om det behövs ytterligare komplettering. Tack på förhand!{INFO}<br><br><br>Mvh {ADMIN}<br>DRP"
+54,ProvetCloud_Template,"Hej,<br><br>Här kommer svar på efterfrågad komplettering från {WHO}.<br>Hör gärna av er om det behövs ytterligare komplettering. Tack på förhand!{INFO}<br><br><br>Mvh {ADMIN}<br>DRP"
+55,Complement_Damage_Request_Insurance_Company_Subject,Info från försäkringsbolaget: Komplettering av en skadeanmälan
+56,Complement_Damage_Request_Insurance_Company_Template,"Hej,<br><br>Här kommer önskemål om komplettering av en skadeanmälan. Skicka kompletteringen till försäkringsbolaget med angiven referens. Ni kan också maila den till oss - ange då nedan angiven referens i svaret så vidarebefordrar vi det. <br><br>""<b><i>{EMAIL}</i></b>""<br><br>Tack på förhand!{INFO}<br><br><br>Mvh {ADMIN}<br>DRP"
+57,Complement_Damage_Request_Clinic_Subject,Komplettering av en skadeanmälan
+58,Complement_Damage_Request_Clinic_Template,"Hej,<br><br>Här kommer svar på efterfrågad komplettering från kliniken. <br><br>""<b><i>{EMAIL}</i></b>""<br><br>Tack på förhand!{INFO}<br><br><br>Mvh {ADMIN}<br>DRP"
+59,Settlement_Request_Subject,Info från försäkringsbolaget: Förhandsbesked
+60,Settlement_Request_Template,"Hej,<br><br>Här kommer ett förhandsbesked från försäkringsbolaget.<br><br>""<b><i>{EMAIL}</i></b>""<br><br>Tack på förhand!{INFO}<br><br><br>Mvh {ADMIN}<br>DRP"
+61,Settlement_Approved_Subject,Ersättningsbesked för DR utanför DRP?
+62,Settlement_Approved_Template,"Hej,<br><br>Här kommer ett ersättningsbesked från {WHO} för en direktreglering som inte verkar vara skickad via DRP.<br><br>""<b><i>{EMAIL}</i></b>""<br><br>Återkoppla gärna ifall något ska meddelas försäkringsbolaget eller om vi missuppfattat.<br><br>Tack på förhand!<br><br><br>Mvh {ADMIN}<br>DRP"
+63,Message_Subject,Information om ärende från {WHO}
+64,Message_Template,"Hej,<br><br>Vänligen se meddelande från {WHO}.<br><br>""<b><i>{EMAIL}</i></b>""<br><br>Ni kan svara på detta mail om ni vill att vi vidarebefordrar något. Tack på förhand!{INFO}<br><br><br>Mvh {ADMIN}<br>DRP"
+65,Question_Subject,Fråga om ärende från {WHO}
+66,Question_Template,"Hej,<br><br>Här kommer en fråga om en direktreglering från {WHO}. Svara på detta mail {REFERENCE} så vidarebefordrar vi det till försäkringsbolaget.<br><br>""<b><i>{EMAIL}</i></b>""<br><br>Tack på förhand!{INFO}<br><br><br>Mvh {ADMIN}<br>DRP"

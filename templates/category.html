@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Email Category and Connection</title>
+  <link href='https://fonts.googleapis.com/css?family=Pacifico' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Arimo' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Hind:300' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans+Condensed:300' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" href="/static/css/style.css"> 
+</head>
+
+<body>
+    <div class="ban">
+      <h3>Email Category and Connection</h3>
+      
+      <!-- Display messages -->
+      {% if success_message %}
+        <div class="success-message" style="color: green; margin: 10px 0; padding: 10px; background-color: #f0f8f0; border: 1px solid #4CAF50; border-radius: 4px;">
+          ✅ {{ success_message }}
+          {% if filename %}
+            <br><small>File: {{ filename }}</small>
+          {% endif %}
+        </div>
+      {% endif %}
+      
+      {% if error_message %}
+        <div class="error-message" style="color: red; margin: 10px 0; padding: 10px; background-color: #fdf0f0; border: 1px solid #f44336; border-radius: 4px;">
+          ❌ {{ error_message }}
+        </div>
+      {% endif %}
+      
+      {% if message %}
+        <div class="info-message" style="color: blue; margin: 10px 0; padding: 10px; background-color: #f0f4ff; border: 1px solid #2196F3; border-radius: 4px;">
+          ℹ️ {{ message }}
+        </div>
+      {% endif %}
+      
+      <!-- File upload form -->
+      <form class="float-title" method="POST" enctype="multipart/form-data">
+        <label for="emailJsonFile">Upload an email JSON file:&nbsp;&nbsp;&nbsp;&nbsp;</label>
+        <input type="file" name="emailJsonFile" accept=".json" required>
+        <input type="submit" value="Process">
+      </form>
+      
+      {% if total_processed %}
+        <p style="margin-top: 15px;"><strong>Total emails processed: {{ total_processed }}</strong></p>
+      {% endif %}
+    </div>
+    
+    <div class="result">
+      {% if record_json %}
+        <div class="results-header" style="margin: 20px 0; padding: 10px; background-color: #f5f5f5; border-radius: 4px;">
+          <h4>Processing Results</h4>
+          <p>Showing {{ record_json|length }} processed emails</p>
+        </div>
+        
+        <div class="results-container" style="max-height: 600px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
+          {% for record in record_json %}
+            <div class="email-record" style="margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 4px; background-color: #fafafa;">
+              <div class="record-header" style="margin-bottom: 10px; font-weight: bold; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;">
+                Email ID: {{ record.id or 'N/A' }}
+                {% if record.category %}
+                  | Category: <span style="color: #2196F3; background-color: #e3f2fd; padding: 2px 6px; border-radius: 3px;">{{ record.category }}</span>
+                {% endif %}
+                {% if record.note %}
+                  | Note: <span style="color: {{ 'green' if record.note == 'Reliable' else 'orange' }}; font-weight: bold;">{{ record.note }}</span>
+                {% endif %}
+              </div>
+              
+              <div class="record-details" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9em;">
+                {% for key, value in record.items() %}
+                  {% if value is not none and value != '' and key not in ['id', 'category', 'note'] %}
+                    <div style="padding: 5px;">
+                      <strong style="color: #555;">{{ key }}:</strong>
+                      {% if key == 'errandId' and value %}
+                        <span style="color: #4CAF50; font-weight: bold;">[{{ value|join(', ') if value is iterable and value is not string else value }}]</span>
+                      {% elif key in ['settlementAmount', 'totalAmount'] and value %}
+                        <span style="color: #FF9800; font-weight: bold;">{{ value }} kr</span>
+                      {% elif key == 'isStaffAnimal' %}
+                        <span style="color: {{ 'red' if value else 'green' }}; font-weight: bold;">{{ 'Yes' if value else 'No' }}</span>
+                      {% elif key in ['from', 'sender', 'receiver'] %}
+                        <span style="color: #9C27B0;">{{ value }}</span>
+                      {% elif key == 'source' %}
+                        <span style="color: #795548; background-color: #f3e5f5; padding: 1px 4px; border-radius: 2px;">{{ value }}</span>
+                      {% else %}
+                        <span>{{ value }}</span>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}  
+          <div class="no-results" style="text-align: center; padding: 50px; color: #666;">
+            <p>📁 No results to display.</p>
+            <p>Upload an email JSON file above to see processed results here.</p>
+          </div>
+      {% endif %}
+    </div>
+    <a href="/dashboard" class="back-button">⬅️ Dashboard</a> 
+</body>
+</html>

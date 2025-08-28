@@ -1,0 +1,15 @@
+id,forwardWords
+1,Från:.*\nSkickat:.*\nTill:.*\nÄmne:.*(?=\n)
+2,^\s*Från:.*\n\s*Skickat:.*\n\s*Till:.*\n\s*Ämne:.*(?=\n|$)
+3,Från:.*\nDatum:.*\nTill:.*\nÄmne:.*(?=\n)
+4,^\s*Från:.*\n\s*Datum:.*\n\s*Till:.*\n\s*Ämne:.*(?=\n)
+5,From:.*\nSent:.*\nTo:.*\nSubject:.*(?=\n)
+6,^\s*From:.*\n\s*Sent:.*\n\s*To:.*\n\s*Subject:.*(?=\n)
+7,"(?<=\n)Den[\d\wåöä\-:\.,+(kl) ]+skrev[\wÅÖÄåöä\-\.\s]+(DRP)? *(<.*@.*>)?:?(?=\n)(?<=\n)På[\d\wåöä\-: ]+CEST skrev\s+[\wÅÖÄåöä\-\.\s]+(DRP)?\s*(<.*@.*>)?:?(?=\n)"
+8,(?<=\n)[\d\wåöä\-:\. ]+skrev[\wÅÖÄåöä\-\.\s]+DRP\s*(<.*@.*>)?:(?=\n)
+9,(?<=\n)[\d\-:\. ]+skrev[\wÅÖÄåöä\-\.\s]+(DRP|Direktregleringsportalen):(?=\n)
+10,(?<=\n)Den[\wåöä\d:<>@\.\s]+skrev:(?=\n)
+11,(?<=\n).*skrev.*(?=\n)
+12,(?<=\n)On .*? wrote:
+13,---------- Forwarded message ---------
+14,---------- Vidarebefordrat meddelande ---------

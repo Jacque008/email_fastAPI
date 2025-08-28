@@ -1,0 +1,339 @@
+clinicId,clinicName,clinicEmail,role,inactivated,keyword,provetCloud
+1,Bollnäs Veterinärpraktik,anne.pigg@bollnasvet.se,employee_email,,,
+1,Bollnäs Veterinärpraktik,info@bollnasvet.se,main_email,,bollnasvet,bollnäs
+1,Bollnäs Veterinärpraktik,klinik-bollnasvet@direktregleringsportalen.se,function_email,,,
+1,Bollnäs Veterinärpraktik,mail+bollnasvet@direktregleringsportalen.se,employee_email,,,
+1,Bollnäs Veterinärpraktik,marie.ling@bollnasvet.se,employee_email,,,
+1,Bollnäs Veterinärpraktik,oyvind.nagelhus@bollnasvet.se,employee_email,,,
+2,Enköpings Djurklinik,info@enkopingsdjurklinik.se,main_email,2025-02-10 00:00:00+00:00,,
+2,Enköpings Djurklinik,jf.lundin@vetopia.se,employee_email,2025-02-10 00:00:00+00:00,,
+2,Enköpings Djurklinik,jim.andreasson@enkopingsdjurklinik.se,employee_email,2025-02-10 00:00:00+00:00,,
+2,Enköpings Djurklinik,klinik-edk@direktregleringsportalen.se,function_email,2025-02-10 00:00:00+00:00,,
+2,Enköpings Djurklinik,mail+edk@direktregleringsportalen.se,employee_email,2025-02-10 00:00:00+00:00,,
+3,Dingleveterinärerna,amanda@dinglevet.se,employee_email,,,
+3,Dingleveterinärerna,anna.haraldsen@dinglevet.se,employee_email,,,
+3,Dingleveterinärerna,anna.waenerlund@dinglevet.se,employee_email,,,
+3,Dingleveterinärerna,christine.hansson@dinglevet.se,employee_email,,,
+3,Dingleveterinärerna,info@dinglevet.se,main_email,,dingle,dingle
+3,Dingleveterinärerna,jennie.ljungberg@dinglevet.se,employee_email,,,
+3,Dingleveterinärerna,jonas.vidarsson@dinglevet.se,employee_email,,,
+3,Dingleveterinärerna,klinik-dingle@direktregleringsportalen.se,function_email,,,
+3,Dingleveterinärerna,linnea.ekberg@dingleveterinarerna.se,employee_email,,,
+3,Dingleveterinärerna,mail+dingle@direktregleringsportalen.se,employee_email,,,
+3,Dingleveterinärerna,mathias.haraldsen@dinglevet.se,employee_email,,,
+3,Dingleveterinärerna,reception.ll@dinglevet.se,employee_email,,,
+4,Din Vet Piteå - GAMMAL,daniel@dinvetpitea.se,employee_email,2023-09-28 00:00:00+00:00,,
+4,Din Vet Piteå - GAMMAL,info+mail@dinvetpitea.se,employee_email,2023-09-28 00:00:00+00:00,,
+4,Din Vet Piteå - GAMMAL,info@dinvetpitea.se,main_email,2023-09-28 00:00:00+00:00,,
+4,Din Vet Piteå - GAMMAL,klinik-dinvetpiteagammal@direktregleringsportalen.se,function_email,2023-09-28 00:00:00+00:00,,
+4,Din Vet Piteå - GAMMAL,mail+dinvetpiteagammal@direktregleringsportalen.se,employee_email,2023-09-28 00:00:00+00:00,,
+5,Zootopia Vet.,klinik-zootopia@direktregleringsportalen.se,function_email,,,
+5,Zootopia Vet.,mail+zootopia@direktregleringsportalen.se,employee_email,,,
+5,Zootopia Vet.,titti@zootopia.se,employee_email,,,
+5,Zootopia Vet.,vet@zootopiavet.se,main_email,,zootopia,zootopia
+6,Råda bot hund- och kattklinik,christina.loof@ludvig.se,employee_email,,,
+6,Råda bot hund- och kattklinik,info@radabot.se,main_email,,radabot,råda
+6,Råda bot hund- och kattklinik,klinik-radabot@direktregleringsportalen.se,function_email,,,
+6,Råda bot hund- och kattklinik,mail+radabot@direktregleringsportalen.se,employee_email,,,
+7,Er Veterinär i Linköping,info@ervet.se,main_email,2022-06-21 00:00:00+00:00,,
+7,Er Veterinär i Linköping,klinik-erveterinar@direktregleringsportalen.se,function_email,2022-06-21 00:00:00+00:00,,
+7,Er Veterinär i Linköping,mail+ervet@direktregleringsportalen.se,employee_email,2022-06-21 00:00:00+00:00,,
+8,Ljungby Smådjursklinik,info@ljungbysmadjur.se,main_email,,"lj, smadjur",ljungby
+8,Ljungby Smådjursklinik,klinik-ljsmadjur@direktregleringsportalen.se,function_email,,,
+8,Ljungby Smådjursklinik,mail+ljsmadjur@direktregleringsportalen.se,employee_email,,,
+9,Veterinärerna i Svenljunga,codruta.barbos@svenvet.se,employee_email,,,
+9,Veterinärerna i Svenljunga,daniel.svensson@svenvet.se,employee_email,,,
+9,Veterinärerna i Svenljunga,info@svenvet.se,main_email,,"sven, vet",svenljunga
+9,Veterinärerna i Svenljunga,ionel.barbos@svenvet.se,employee_email,,,
+9,Veterinärerna i Svenljunga,klinik-svenljungavet@direktregleringsportalen.se,function_email,,,
+9,Veterinärerna i Svenljunga,linnea.ros@svenvet.se,employee_email,,,
+9,Veterinärerna i Svenljunga,mail+svenvet@direktregleringsportalen.se,employee_email,,,
+9,Veterinärerna i Svenljunga,marian.goilean@svenvet.se,employee_email,,,
+9,Veterinärerna i Svenljunga,marika.lindberg@svenvet.se,employee_email,,,
+9,Veterinärerna i Svenljunga,raluca.georgescu@svenvet.se,employee_email,,,
+9,Veterinärerna i Svenljunga,steliana.bodea@svenvet.se,employee_email,,,
+10,Hästspecialisten,klinik-hastspecialisten@direktregleringsportalen.se,function_email,2024-08-16 00:00:00+00:00,,
+10,Hästspecialisten,mail+hastspecialisten@direktregleringsportalen.se,employee_email,2024-08-16 00:00:00+00:00,,
+10,Hästspecialisten,tove@hastspecialisten.se,main_email,2024-08-16 00:00:00+00:00,,
+11,Citykattens Veterinärklinik,info@citykatten.se,main_email,,citykatten,citykattens
+11,Citykattens Veterinärklinik,klinik-citykatten@direktregleringsportalen.se,function_email,,,
+11,Citykattens Veterinärklinik,mail+citykatten@direktregleringsportalen.se,employee_email,,,
+12,Cityvet. Malmö,info@cityvet.se,main_email,,cityvet.,cityvet.
+12,Cityvet. Malmö,klinik-cityveterinaren@direktregleringsportalen.se,function_email,,,
+12,Cityvet. Malmö,mail+cityvet@direktregleringsportalen.se,employee_email,,,
+13,Djurvännen,jforstenius@hotmail.com,main_email,,djurvannen,djurvännen
+13,Djurvännen,klinik-djurvannen@direktregleringsportalen.se,function_email,,,
+13,Djurvännen,mail+djurvannen@direktregleringsportalen.se,employee_email,,,
+14,Smådjursveterinären a6,info@smadjursveterinaren.com,main_email,,smadjursveterinaren,smådjursveterinären
+14,Smådjursveterinären a6,iveta.aleksane@vetfamily.com,employee_email,,,
+14,Smådjursveterinären a6,klinik-smadjursveterinaren@direktregleringsportalen.se,function_email,,,
+14,Smådjursveterinären a6,mail+smadjursveterinaren@direktregleringsportalen.se,employee_email,,,
+15,NiD Veterinärklinik,klinik-nidvet@direktregleringsportalen.se,function_email,,,
+15,NiD Veterinärklinik,mail+nidvet@direktregleringsportalen.se,employee_email,,,
+15,NiD Veterinärklinik,office@nidvet.se,main_email,,nidvet,"nid, veterinärklinik"
+16,Pleyers Veterinär AB,info@pleyersveterinar.com,main_email,2024-03-03 00:00:00+00:00,,
+16,Pleyers Veterinär AB,klinik-pleyersvet@direktregleringsportalen.se,function_email,2024-03-03 00:00:00+00:00,,
+16,Pleyers Veterinär AB,mail+pleyersvet@direktregleringsportalen.se,employee_email,2024-03-03 00:00:00+00:00,,
+16,Pleyers Veterinär AB,quentin@pleyersveterinar.com,employee_email,2024-03-03 00:00:00+00:00,,
+17,Västkustens Djurklinik AB,jannilin@gmail.com,main_email,2024-05-30 00:00:00+00:00,,
+17,Västkustens Djurklinik AB,klinik-vastkustdjur@direktregleringsportalen.se,function_email,2024-05-30 00:00:00+00:00,,
+17,Västkustens Djurklinik AB,mail+vastkustdjur@direktregleringsportalen.se,employee_email,2024-05-30 00:00:00+00:00,,
+18,Smådjurskliniken Tranås,Mail+smadjurtranas@direktregleringsportalen.se,employee_email,2022-12-20 00:00:00+00:00,,
+18,Smådjurskliniken Tranås,info@smadjur.se,main_email,2022-12-20 00:00:00+00:00,,
+18,Smådjurskliniken Tranås,klinik-smadjurtranas@direktregleringsportalen.se,function_email,2022-12-20 00:00:00+00:00,,
+19,Nynäshamns Djurklinik,info@nynashamnsdjurklinik.se,main_email,,nynashamn,nynäshamns
+19,Nynäshamns Djurklinik,klinik-djurklinikennynashamn@direktregleringsportalen.se,function_email,,,
+19,Nynäshamns Djurklinik,mail+djurklinikennynashamn@direktregleringsportalen.se,employee_email,,,
+20,Färgelanda Veterinärpraktik AB,klinik-vetfargelanda@direktregleringsportalen.se,function_email,,,
+20,Färgelanda Veterinärpraktik AB,mail+vetfargelanda@direktregleringsportalen.se,employee_email,,,
+20,Färgelanda Veterinärpraktik AB,smadjurvet.fargelanda@gmail.com,main_email,,fargelanda,färgelanda
+21,Veterinärkliniken Arken Zoo Nyköping,klinik-vettrisnykoping@direktregleringsportalen.se,function_email,,,
+21,Veterinärkliniken Arken Zoo Nyköping,mail+vettrisnykoping@direktregleringsportalen.se,employee_email,,,
+21,Veterinärkliniken Arken Zoo Nyköping,malin@majena.se,employee_email,,,
+21,Veterinärkliniken Arken Zoo Nyköping,nykoping@vettris.se,employee_email,,,
+21,Veterinärkliniken Arken Zoo Nyköping,veterinar.nykoping@arkenzoo.se,main_email,,nykoping,nyköping
+22,Arken Zoo Veterinärklinik Eskilstuna,eskilstuna@vettris.se,employee_email,,,
+22,Arken Zoo Veterinärklinik Eskilstuna,klinik-vettriseskilstuna@direktregleringsportalen.se,function_email,,,
+22,Arken Zoo Veterinärklinik Eskilstuna,mail+vettriseskilstuna@direktregleringsportalen.se,employee_email,,,
+22,Arken Zoo Veterinärklinik Eskilstuna,veterinar.eskilstuna@arkenzoo.se,main_email,,eskilstuna,eskilstuna
+23,Arken Zoo veterinärklinik Örebro,klinik-vettrisorebro@direktregleringsportalen.se,function_email,,,
+23,Arken Zoo veterinärklinik Örebro,lina.karlberg@vettris.se,employee_email,,,
+23,Arken Zoo veterinärklinik Örebro,mail+vettrisorebro@direktregleringsportalen.se,employee_email,,,
+23,Arken Zoo veterinärklinik Örebro,orebro@vettris.se,employee_email,,,
+23,Arken Zoo veterinärklinik Örebro,veterinar.orebro@arkenzoo.se,main_email,,orebro,örebro
+24,Arken Zoo veterinärklinik Malmö Toftanäs,klinik-vettrismalmo@direktregleringsportalen.se,function_email,,,
+24,Arken Zoo veterinärklinik Malmö Toftanäs,toftanas@vettris.se,employee_email,,,
+24,Arken Zoo veterinärklinik Malmö Toftanäs,veterinar.toftanas@arkenzoo.se,main_email,,toftanas,toftanäs
+25,Haga Veterinär AB,ekonomi@hagaveterinar.se,employee_email,,,
+25,Haga Veterinär AB,elise.jonsson00@gmail.com,employee_email,,,
+25,Haga Veterinär AB,enya.almgren@gmail.com,employee_email,,,
+25,Haga Veterinär AB,j.soren@hotmail.com,employee_email,,,
+25,Haga Veterinär AB,jansson.embla@gmail.com,employee_email,,,
+25,Haga Veterinär AB,klinik-hagavet@direktregleringsportalen.se,function_email,,,
+25,Haga Veterinär AB,malin.stuhre@hotmail.com,employee_email,,,
+25,Haga Veterinär AB,reception@hagaveterinar.se,main_email,,hagavet,haga
+26,Veterinärhuset JVJV AB,info@veterinarhusethaninge.se,main_email,,veterinarhusethaninge,veterinärhuset
+26,Veterinärhuset JVJV AB,klinik-veterinarhusethaninge@direktregleringsportalen.se,function_email,,,
+26,Veterinärhuset JVJV AB,mail+veterinarhusethaninge@direktregleringsportalen.se,employee_email,,,
+27,LinguaVet HB,dr.ingrid.elter@web.de,main_email,,linguavet,linguavet
+27,LinguaVet HB,klinik-linguavet@direktregleringsportalen.se,function_email,,,
+27,LinguaVet HB,mail+linguavet@direktregleringsportalen.se,employee_email,,,
+28,Djurkliniken i Skellefteå,klinik+djurklinikenskelleftea@direktregleringsportalen.se,employee_email,,,
+28,Djurkliniken i Skellefteå,klinik-djurklinikenskelleftea@direktregleringsportalen.se,function_email,,,
+28,Djurkliniken i Skellefteå,paulina.hammar@lapplandsdjurklinik.se,employee_email,,,
+28,Djurkliniken i Skellefteå,reception@gbdjurklinik.se,employee_email,,,
+28,Djurkliniken i Skellefteå,skelleftea@lapplandsdjurklinik.se,main_email,,gbdjurklinik,"djurkliniken, skellefteå"
+29,Skellefteå Anderstorg,klinik-anderstorg@direktregleringsportalen.se,function_email,,,
+29,Skellefteå Anderstorg,marcin@vetstrive.com,employee_email,,,
+29,Skellefteå Anderstorg,skelleftea@lapplandsdjurklinik.se,main_email,,"skelleftea, lappland",anderstorg
+30,Lapplands Jokkmokk,jokkmokk+mail@lapplandsdjurklinik.se,employee_email,2023-09-26 00:00:00+00:00,,
+30,Lapplands Jokkmokk,jokkmokk@lapplandsdjurklinik.se,main_email,2023-09-26 00:00:00+00:00,,
+30,Lapplands Jokkmokk,klinik-djurklinikenjokkmokkgammal@direktregleringsportalen.se,function_email,2023-09-26 00:00:00+00:00,,
+30,Lapplands Jokkmokk,mail+djurklinikenjokkmokkgammal@direktregleringsportalen.se,employee_email,2023-09-26 00:00:00+00:00,,
+31,Lapplands Arvidsjaur,arvidsjaur+mail@lapplandsdjurklinik.se,employee_email,2023-09-20 00:00:00+00:00,,
+31,Lapplands Arvidsjaur,arvidsjaur@lapplandsdjurklinik.se,main_email,2023-09-20 00:00:00+00:00,,
+31,Lapplands Arvidsjaur,klinik-djurklinikenarvidsjaurgammal@direktregleringsportalen.se,function_email,2023-09-20 00:00:00+00:00,,
+31,Lapplands Arvidsjaur,mail+djurklinikenarvidsjaurgammal@direktregleringsportalen.se,employee_email,2023-09-20 00:00:00+00:00,,
+32,Lapplands Boden,boden+mail@lapplandsdjurklinik.se,employee_email,2023-10-05 00:00:00+00:00,,
+32,Lapplands Boden,boden@lapplandsdjurklinik.se,main_email,2023-10-05 00:00:00+00:00,,
+32,Lapplands Boden,klinik-djurklinikbodengammal@direktregleringsportalen.se,function_email,2023-10-05 00:00:00+00:00,,
+32,Lapplands Boden,mail+djurklinikbodengammal@direktregleringsportalen.se,employee_email,2023-10-05 00:00:00+00:00,,
+33,Lapplands Luleå,klinik-djurklinikluleagammal@direktregleringsportalen.se,function_email,2023-10-02 00:00:00+00:00,,
+33,Lapplands Luleå,lulea+mail@lapplandsdjurklinik.se,employee_email,2023-10-02 00:00:00+00:00,,
+33,Lapplands Luleå,lulea@lapplandsdjurklinik.se,main_email,2023-10-02 00:00:00+00:00,,
+33,Lapplands Luleå,mail+djurklinikluleagammal@direktregleringsportalen.se,employee_email,2023-10-02 00:00:00+00:00,,
+34,Lapplands Kiruna,kiruna+mail@lapplandsdjurklinik.se,employee_email,2023-10-05 00:00:00+00:00,,
+34,Lapplands Kiruna,kiruna@lapplandsdjurklinik.se,main_email,2023-10-05 00:00:00+00:00,,
+34,Lapplands Kiruna,klinik-djurklinikkirunagammal@direktregleringsportalen.se,function_email,2023-10-05 00:00:00+00:00,,
+34,Lapplands Kiruna,mail+djurklinikkirunagammal@direktregleringsportalen.se,employee_email,2023-10-05 00:00:00+00:00,,
+35,Lapplands Gällivare,info+mail@lapplandsdjurklinik.se,employee_email,2023-09-30 00:00:00+00:00,,
+35,Lapplands Gällivare,info@lapplandsdjurklinik.se,main_email,2023-09-30 00:00:00+00:00,,
+35,Lapplands Gällivare,klinik-ldgallivaregammal@direktregleringsportalen.se,function_email,2023-09-30 00:00:00+00:00,,
+35,Lapplands Gällivare,mail+ldgallivaregammal@direktregleringsportalen.se,employee_email,2023-09-30 00:00:00+00:00,,
+36,Södermalms veterinärklinik AB,info@sodervet.se,main_email,,"info, sodervet","södermalms, veterinärklinik"
+36,Södermalms veterinärklinik AB,klinik-sodervet@direktregleringsportalen.se,function_email,,,
+36,Södermalms veterinärklinik AB,mail+sodermalmsvet@direktregleringsportalen.se,employee_email,,,
+37,Ahlbergs Veterinärpraktik,klinik-ahlbergsvet@direktregleringsportalen.se,function_email,,,
+37,Ahlbergs Veterinärpraktik,kontakt@ahlbergsvet.se,main_email,,ahlbergsvet,ahlbergs
+37,Ahlbergs Veterinärpraktik,mail+ahlbergsvet@direktregleringsportalen.se,employee_email,,,
+38,Hälsinge Smådjursklinik Hudiksvall,beatrice.sahlin@hudikvet.se,employee_email,,,
+38,Hälsinge Smådjursklinik Hudiksvall,direktreglering2@hudikvet.se,main_email,,"info, hudikvet",hudiksvall
+38,Hälsinge Smådjursklinik Hudiksvall,info@hudikvet.se,employee_email,,,
+38,Hälsinge Smådjursklinik Hudiksvall,klinik-halsingevethudik@direktregleringsportalen.se,function_email,,,
+38,Hälsinge Smådjursklinik Hudiksvall,linnea.andersson@hudikvet.se,employee_email,,,
+38,Hälsinge Smådjursklinik Hudiksvall,mail+halsingevet@direktregleringsportalen.se,employee_email,,,
+39,Hälsinge Smådjursklinik Söderhamn,eva.bodell@halsingevet.se,employee_email,,,
+39,Hälsinge Smådjursklinik Söderhamn,klinik-halsingevetsoderhamn@direktregleringsportalen.se,function_email,,,
+39,Hälsinge Smådjursklinik Söderhamn,mail+halsingevetsoderhamn@direktregleringsportalen.se,employee_email,,,
+39,Hälsinge Smådjursklinik Söderhamn,soderhamn@hudikvet.se,main_email,,soderhamn,söderhamn
+43,Hälsinge Smådjursklinik Ljusdal,klinik-halsingevetljusdal@direktregleringsportalen.se,function_email,,,
+43,Hälsinge Smådjursklinik Ljusdal,ljusdal@hudikvet.se,main_email,,ljusdal,ljusdal
+43,Hälsinge Smådjursklinik Ljusdal,mail+halsingevetljusdal@direktregleringsportalen.se,employee_email,,,
+44,Gnesta Veterinärpraktik,gnestavet@gmail.com,main_email,2025-07-22 00:00:00+00:00,gnestavet,gnesta
+44,Gnesta Veterinärpraktik,klinik-gnestavet@direktregleringsportalen.se,function_email,2025-07-22 00:00:00+00:00,,
+44,Gnesta Veterinärpraktik,mail+klinik-gnestavet@direktregleringsportalen.se,employee_email,2025-07-22 00:00:00+00:00,,
+45,Din Veterinär i Knivsta,info@dinvetknivsta.se,main_email,,dinvetknivsta,knivsta
+45,Din Veterinär i Knivsta,kalle@dinvetknivsta.se,employee_email,,,
+45,Din Veterinär i Knivsta,klinik-dinvetknivsta@direktregleringsportalen.se,function_email,,,
+45,Din Veterinär i Knivsta,mail+klinik-dinvetknivsta@direktregleringsportalen.se,employee_email,,,
+46,Hags Gårdsveterinär,info@hagsgardsveterinar.se,main_email,,hagsgardsvet,"hags, gårdsveterinär"
+46,Hags Gårdsveterinär,katherine@hagsgardsveterinar.se,employee_email,,,
+46,Hags Gårdsveterinär,klinik-hags@direktregleringsportalen.se,function_email,,,
+46,Hags Gårdsveterinär,mail+klinik-hags@direktregleringsportalen.se,employee_email,,,
+47,Aniuma Vetcentrum,aniuma@vetcentrum.se,main_email,,aniuma,aniuma
+47,Aniuma Vetcentrum,klinik-aniumavetcentrum@direktregleringsportalen.se,function_email,,,
+48,VetGot Djurklinik,info@vetgot.com,main_email,,vetgot,vetgot
+48,VetGot Djurklinik,klinik-vetgotvisby@direktregleringsportalen.se,function_email,,,
+48,VetGot Djurklinik,mail+klinik-vetgotvisby@direktregleringsportalen.se,employee_email,,,
+48,VetGot Djurklinik,staffan@mon7.se,employee_email,,,
+49,Veris Vet,klinik-verisvet@direktregleringsportalen.se,function_email,,,
+49,Veris Vet,mail+klinik-verisvet@direktregleringsportalen.se,employee_email,,,
+49,Veris Vet,veronica@verisvet.se,main_email,,verisvet,veris
+50,Din Veterinär Piteå,info@dinvetpitea.se,main_email,,dinvetpitea,piteå
+50,Din Veterinär Piteå,klinik-dinvetpitea@direktregleringsportalen.se,function_email,,,
+50,Din Veterinär Piteå,mail+dinvetpitea@direktregleringsportalen.se,employee_email,,,
+51,Lapplands Djurklinik Jokkmokk,jokkmokk@lapplandsdjurklinik.se,main_email,,jokkmokk,jokkmokk
+51,Lapplands Djurklinik Jokkmokk,klinik-djurklinikenjokkmokk@direktregleringsportalen.se,function_email,,,
+51,Lapplands Djurklinik Jokkmokk,mail+djurklinikenjokkmokk@direktregleringsportalen.se,employee_email,,,
+52,Lapplands Djurklinik Arvidsjaur,arvidsjaur@lapplandsdjurklinik.se,main_email,,arvidsjaur,arvidsjaur
+52,Lapplands Djurklinik Arvidsjaur,klinik-djurklinikenarvidsjaur@direktregleringsportalen.se,function_email,,,
+52,Lapplands Djurklinik Arvidsjaur,mail+djurklinikenarvidsjaur@direktregleringsportalen.se,employee_email,,,
+53,Lapplands Djurklinik Boden,boden@lapplandsdjurklinik.se,main_email,,boden,boden
+53,Lapplands Djurklinik Boden,klinik-djurklinikboden@direktregleringsportalen.se,function_email,,,
+53,Lapplands Djurklinik Boden,mail+djurklinikboden@direktregleringsportalen.se,employee_email,,,
+54,Lapplands Djurklinik Luleå,klinik-djurkliniklulea@direktregleringsportalen.se,function_email,,,
+54,Lapplands Djurklinik Luleå,lulea@lapplandsdjurklinik.se,main_email,,"lulea, lappland","lapplands, luleå"
+54,Lapplands Djurklinik Luleå,mail+djurkliniklulea@direktregleringsportalen.se,employee_email,,,
+54,Lapplands Djurklinik Luleå,petra.lindstrom@lapplandsdjurklinik.se,employee_email,,,
+55,Lapplands Djurklinik Kiruna,kiruna@lapplandsdjurklinik.se,main_email,,kiruna,kiruna
+55,Lapplands Djurklinik Kiruna,klinik-djurklinikkiruna@direktregleringsportalen.se,function_email,,,
+55,Lapplands Djurklinik Kiruna,mail+djurklinikkiruna@direktregleringsportalen.se,employee_email,,,
+56,Lapplands Djurklinik Gällivare,info@lapplandsdjurklinik.se,main_email,,"info, lappland",gällivare
+56,Lapplands Djurklinik Gällivare,klinik-ldgallivare@direktregleringsportalen.se,function_email,,,
+56,Lapplands Djurklinik Gällivare,mail+ldgallivare@direktregleringsportalen.se,employee_email,,,
+57,Sjöbo Djurklinik,info@sjobodjurklinik.se,main_email,,sjobodjurklinik,sjöbo
+57,Sjöbo Djurklinik,klinik-lindblomdjurvard@direktregleringsportalen.se,function_email,,,
+57,Sjöbo Djurklinik,mail+lindblomdjurvard@direktregleringsportalen.se,employee_email,,,
+58,Dolittle Vet,info@lyckselevet.se,main_email,,lyckselevet,dolittle
+58,Dolittle Vet,klinik-lyckselevet@direktregleringsportalen.se,function_email,,,
+58,Dolittle Vet,mail+lyckselevet@direktregleringsportalen.se,employee_email,,,
+59,Andrus Haljaste Veterinärpraktik,andrus.haljaste@gmail.com,main_email,2025-07-22 00:00:00+00:00,haljaste,haljaste
+59,Andrus Haljaste Veterinärpraktik,klinik-andrushaljaste@direktregleringsportalen.se,function_email,2025-07-22 00:00:00+00:00,,
+60,Veterinär Sara Sahlin,klinik-sarasahlin@direktregleringsportalen.se,function_email,,,
+60,Veterinär Sara Sahlin,mail+klinik-sarasahlin@direktregleringsportalen.se,employee_email,,,
+60,Veterinär Sara Sahlin,sahlinsveterinarpraktik@gmail.com,main_email,,sahlin,sahlin
+61,Vislandavet,info@vislandavet.se,main_email,,vislandavet,vislandavet
+61,Vislandavet,klinik-vislandavet@direktregleringsportalen.se,function_email,,,
+61,Vislandavet,mail+klinik-vislandavet@direktregleringsportalen.se,employee_email,,,
+62,Karin & Staffan Veterinär AB,klinik-ksvetab@direktregleringsportalen.se,function_email,,,
+62,Karin & Staffan Veterinär AB,mail+ksvetab@direktregleringsportalen.se,employee_email,,,
+62,Karin & Staffan Veterinär AB,staffan.myrin@telia.com,main_email,,ksvetab,staffan
+63,Wilkesbacka Veterinärklinik,klinik-wilkesbacka@direktregleringsportalen.se,function_email,,,
+63,Wilkesbacka Veterinärklinik,mail+wilkesbacka@direktregleringsportalen.se,employee_email,,,
+63,Wilkesbacka Veterinärklinik,mats@wilkesbacka.se,main_email,,wilkesbacka,wilkesbacka
+64,NordicVet,klinik-nordicvet@direktregleringsportalen.se,function_email,,,
+64,NordicVet,mail+nordicvet@direktregleringsportalen.se,employee_email,,,
+64,NordicVet,reglering@nordicvet.net,main_email,,nordicvet,nordicvet
+65,Ögonstenens Djurklinik,info@ogonstenensdjurklinik.se,main_email,,ogonstenen,ögonstenens
+65,Ögonstenens Djurklinik,klinik-ogonstenen@direktregleringsportalen.se,function_email,,,
+65,Ögonstenens Djurklinik,mail+ogonstenen@direktregleringsportalen.se,employee_email,,,
+66,Djurkliniken Anima,info@djurklinikenanima.se,main_email,,anima,anima
+66,Djurkliniken Anima,klinik-anima@direktregleringsportalen.se,function_email,,,
+66,Djurkliniken Anima,mail+anima@direktregleringsportalen.se,employee_email,,,
+67,Björkstadens djurklinik,info@bjorkstadensdjurklinik.se,main_email,2024-03-15 00:00:00+00:00,,
+67,Björkstadens djurklinik,klinik-bjorkstadens@direktregleringsportalen.se,function_email,2024-03-15 00:00:00+00:00,,
+68,Smådjurskliniken Oskarshamn,info@vetstn.se,main_email,,vetstn,oskarshamn
+68,Smådjurskliniken Oskarshamn,klinik-smadjurohamn@direktregleringsportalen.se,function_email,,,
+69,Hornstulls Hund och Katt AB,info@hornstullshundochkatt.se,main_email,,hornstulls,hornstulls
+69,Hornstulls Hund och Katt AB,klinik-hornstulls@direktregleringsportalen.se,function_email,,,
+69,Hornstulls Hund och Katt AB,mail+hornstulls@direktregleringsportalen.se,employee_email,,,
+70,Ekbergets Veterinärpraktik,info@ekbergetsvet.se,main_email,,ekbergetsvet,ekbergets
+70,Ekbergets Veterinärpraktik,klinik-ekbergetsvet@direktregleringsportalen.se,function_email,,,
+70,Ekbergets Veterinärpraktik,mail+klinik-ekbergetsvet@direktregleringsportalen.se,employee_email,,,
+71,Djurkliniken Norrtälje,info@djurklinikennorrtalje.se,main_email,2025-07-22 00:00:00+00:00,norrtalje,norrtälje
+71,Djurkliniken Norrtälje,klinik-norrtalje@direktregleringsportalen.se,function_email,2025-07-22 00:00:00+00:00,,
+72,Bergslagens Djurklinik,bergslagensdjurklinik@gmail.com,main_email,,bergslagens,bergslagens
+72,Bergslagens Djurklinik,klinik-bergslagensdjurklinik@direktregleringsportalen.se,function_email,,,
+72,Bergslagens Djurklinik,mail+bergslagensdjurklinik@direktregleringsportalen.se,employee_email,,,
+73,Täby Kyrkby Veterinärklinik,info@tabykyrkbyvet.se,main_email,,tabykyrkbyvet,kyrkby
+73,Täby Kyrkby Veterinärklinik,klinik-tabykyrkbyvet@direktregleringsportalen.se,function_email,,,
+74,DjurensDoktor i Grängesberg,boka@djurensdoktor.se,main_email,,djurensdoktor,djurensdoktor
+74,DjurensDoktor i Grängesberg,klinik-djurensdoktor@direktregleringsportalen.se,function_email,,,
+74,DjurensDoktor i Grängesberg,mail+djurensdoktor@direktregleringsportalen.se,employee_email,,,
+75,Sandelin Veterinärpraktik AB,info@vetistallis.se,main_email,,vetistallis,sandelin
+75,Sandelin Veterinärpraktik AB,klinik-vetistallis@direktregleringsportalen.se,function_email,,,
+75,Sandelin Veterinärpraktik AB,mail+vetistallis@direktregleringsportalen.se,employee_email,,,
+76,Prostens Veterinärmottagning,klinik-prostensvet@direktregleringsportalen.se,function_email,,,
+76,Prostens Veterinärmottagning,mail+prostensvet@direktregleringsportalen.se,employee_email,,,
+76,Prostens Veterinärmottagning,vet@prostens.se,main_email,,prostens,prostens
+77,Djurhälsan i Dalarna,info@rommekliniken.se,main_email,,rommekliniken,djurhälsan
+77,Djurhälsan i Dalarna,klinik-djurhalsan@direktregleringsportalen.se,function_email,,,
+77,Djurhälsan i Dalarna,mail+djurhalsan@direktregleringsportalen.se,employee_email,,,
+78,Sövestadgårdens veterinärklinik,info@sovestadgarden.se,main_email,,sovestadgarden,sövestadgårdens
+78,Sövestadgårdens veterinärklinik,klinik-sovestadgarden@direktregleringsportalen.se,function_email,,,
+78,Sövestadgårdens veterinärklinik,mail+sovestadsgarden@direktregleringsportalen.se,employee_email,,,
+79,våra vänner Umeå,klinik-varavannerumea@direktregleringsportalen.se,function_email,,,
+79,våra vänner Umeå,mail+klinik-varavannerumea@direktregleringsportalen.se,employee_email,,,
+79,våra vänner Umeå,umea.zoo@varavanner.se,main_email,,umea,umeå
+80,Arken Zoo Veterinärklinik Arninge,cecilia@ernstvarld.se,employee_email,,,
+80,Arken Zoo Veterinärklinik Arninge,klinik-arkenzooarninge@direktregleringsportalen.se,function_email,,,
+80,Arken Zoo Veterinärklinik Arninge,mail+klinik-arkenzooarninge@direktregleringsportalen.se,employee_email,,,
+80,Arken Zoo Veterinärklinik Arninge,veterinar.arninge@arkenzoo.se,main_email,,arninge,arninge
+81,våra vänner Bromma,bromma.zoo@varavanner.se,main_email,,bromma,bromma
+81,våra vänner Bromma,klinik-varavannerbromma@direktregleringsportalen.se,function_email,,,
+81,våra vänner Bromma,mail+klinik-varavannerbromma@direktregleringsportalen.se,employee_email,,,
+81,våra vänner Bromma,marius.lyszczarz@lapplandsdjurklinik.se,employee_email,,,
+82,våra vänner Barkarby,Barkarby.zoo@varavanner.se,main_email,,barkarby,barkarby
+82,våra vänner Barkarby,klinik-varavannerbarkarby@direktregleringsportalen.se,function_email,,,
+83,våra vänner Karlaplan,karlaplan.zoo@varavanner.se,main_email,,karlaplan,karlaplan
+83,våra vänner Karlaplan,klinik-varavannerkarlaplan@direktregleringsportalen.se,function_email,,,
+84,våra vänner Luleå,klinik-varavannerlulea@direktregleringsportalen.se,function_email,,,
+84,våra vänner Luleå,lulea.zoo@varavanner.se,main_email,,"varavanner, lulea",vänner luleå
+84,våra vänner Luleå,mail+klinik-varavannerlulea@direktregleringsportalen.se,employee_email,,,
+85,våra vänner Göteborg,goteborg.zoo@varavanner.se,main_email,,goteborg,"vänner, göteborg"
+85,våra vänner Göteborg,klinik-varavannergoteborg@direktregleringsportalen.se,function_email,,,
+85,våra vänner Göteborg,mail+klinik-varavannergoteborg@direktregleringsportalen.se,employee_email,,,
+86,Veterinär Kämpaslätten,info@veterinarkampaslatten.se,main_email,,veterinarkampaslatten,kämpaslätten
+86,Veterinär Kämpaslätten,klinik-vetkampaslatten@direktregleringsportalen.se,function_email,,,
+86,Veterinär Kämpaslätten,mail+klinik-vetkampaslatten@direktregleringsportalen.se,employee_email,,,
+87,Pet Vet Sweden AB,info@petvet.se,main_email,,"info, petvet",pet vet
+87,Pet Vet Sweden AB,klinik-petvet@direktregleringsportalen.se,function_email,,,
+87,Pet Vet Sweden AB,mail+klinik-petvet@direktregleringsportalen.se,employee_email,,,
+88,Veterinärna på Bollerup,carlson_toarp@hotmail.com,employee_email,,,
+88,Veterinärna på Bollerup,info@veterinarernapabollerup.se,main_email,,bollerup,bollerup
+88,Veterinärna på Bollerup,klinik-vetbollerup@direktregleringsportalen.se,function_email,,,
+88,Veterinärna på Bollerup,mail+klinik-vetbollerup@direktregleringsportalen.se,employee_email,,,
+89,AniMed,dr@animed.se,main_email,,animed,animed
+89,AniMed,klinik-animed@direktregleringsportalen.se,function_email,,,
+89,AniMed,mail+klinik-animed@direktregleringsportalen.se,employee_email,,,
+90,Petvetica Veterinärtjänster,info@petvetica.se,main_email,,petvetica,petvetica
+90,Petvetica Veterinärtjänster,klinik-petvetica@direktregleringsportalen.se,function_email,,,
+90,Petvetica Veterinärtjänster,mail+klinik-petvetica@direktregleringsportalen.se,employee_email,,,
+91,Cityveterinären Malmö,info@cityvet.se,main_email,,"info, cityvet",cityveterinären
+91,Cityveterinären Malmö,klinik-cityvet@direktregleringsportalen.se,function_email,,,
+91,Cityveterinären Malmö,mail+klinik-cityveterinaren@direktregleringsportalen.se,employee_email,,,
+92,Södermalms veterinärklinik,info@sodervet.se,main_email,,"soder, vet","södermalms, veterinärklinik"
+92,Södermalms veterinärklinik,klara.blomquist@sodervet.se,employee_email,,,
+92,Södermalms veterinärklinik,klinik-sodermalmsvet@direktregleringsportalen.se,function_email,,,
+92,Södermalms veterinärklinik,mail+klinik-sodervet@direktregleringsportalen.se,employee_email,,,
+93,Till Vet AB,carro_hajemo@hotmail.com,main_email,,tillvet,till vet 
+93,Till Vet AB,klinik-tillvet@direktregleringsportalen.se,function_email,,,
+93,Till Vet AB,mail+klinik-tillvet@direktregleringsportalen.se,employee_email,,,
+94,Långban Gårdsveterinär AB,caro@terrangen.se,main_email,,langbangardsvet,långban
+94,Långban Gårdsveterinär AB,klinik-langbangardsvet@direktregleringsportalen.se,function_email,,,
+94,Långban Gårdsveterinär AB,mail+klinik-langbangardsvet@direktregleringsportalen.se,employee_email,,,
+95,HundRehab Göteborg,info@hundrehab.se,main_email,,hundrehab,hundrehab
+95,HundRehab Göteborg,klinik-hundrehabgbg@direktregleringsportalen.se,function_email,,,
+95,HundRehab Göteborg,mail+klinik-hundrehabgbg@direktregleringsportalen.se,employee_email,,,
+96,UNL Vet,klinik-unlvet@direktregleringsportalen.se,function_email,,,
+96,UNL Vet,mail+klinik-unlvet@direktregleringsportalen.se,employee_email,,,
+96,UNL Vet,unlvet@outlook.com,main_email,,unlvet,"unl, vet"
+97,Östra djurpraktiken,klinik-ostradjurpraktiken@direktregleringsportalen.se,function_email,,,
+97,Östra djurpraktiken,mail+klinik-ostradjurpraktiken@direktregleringsportalen.se,employee_email,,,
+97,Östra djurpraktiken,ostradjurpraktiken@gmail.com,main_email,,ostradjurpraktiken,östra
+98,Tuve djurklinik,info@tuvedjurklinik.se,main_email,,tuvedjurklinik,tuve
+98,Tuve djurklinik,klinik-tuvedjurklinik@direktregleringsportalen.se,function_email,,,
+98,Tuve djurklinik,mail+klinik-tuvedjurklinik@direktregleringsportalen.se,employee_email,,,
+99,Arken Zoo Veterinärklinik Borås,klinik-arkenzooboras@direktregleringsportalen.se,function_email,,,
+99,Arken Zoo Veterinärklinik Borås,mail+klinik-arkenzooboras@direktregleringsportalen.se,employee_email,,,
+99,Arken Zoo Veterinärklinik Borås,veterinar.boras@arkenzoo.se,main_email,,boras,borås

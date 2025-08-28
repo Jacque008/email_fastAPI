@@ -1,0 +1,434 @@
+@import url(https://fonts.googleapis.com/css?family=Open+Sans);
+
+/* Button styles */
+.btn {
+	display: inline-block;
+	padding: 8px 15px;
+	margin: 0 auto;
+	font-size: 14px;
+	line-height: 20px;
+	color: #333;
+	text-align: center;
+	text-shadow: 0 1px 1px rgba(255, 255, 255, 0.9);
+	vertical-align: middle;
+	background: linear-gradient(120deg, #f8f9fa, #e9ecef);
+	border: 1px solid #dcdcdc;
+	border-radius: 5px;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	cursor: pointer;
+	transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.btn-block {
+	width: 80%;
+	display: block;
+	margin: 10px auto;
+}
+
+.btn:hover {
+	background: linear-gradient(120deg, #e9ecef, #d6d9dd);
+	box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Primary button */
+.btn-primary {
+	background: linear-gradient(120deg, #74c0fc, #4dabf7);
+	color: #fff;
+	border: 1px solid #4dabf7;
+	text-shadow: none;
+}
+
+.btn-primary:hover {
+	background: linear-gradient(120deg, #4dabf7, #339af0);
+	box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.btn-large {
+	padding: 10px 18px;
+	font-size: 16px;
+	border-radius: 6px;
+}
+
+/* Body and global text styles */
+html, body {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+    padding: 0;
+	font-family: 'Open Sans', sans-serif;
+	/* background: linear-gradient(45deg, rgba(55,71,79,0.7), #f8f3e5);  */
+	background: #eee;
+	color: #333;
+	font-size: 16px;
+	line-height: 1.6;
+	overflow-y: scroll;
+	overflow-x: hidden;
+	display: flex;
+    flex-direction: column;
+}
+
+/* Labels and text */
+.label {
+	font-size: 14px;
+	color: #555;
+}
+
+.ban {
+    background: rgb(77, 180, 130); /* Set the green background */
+    padding: 20px; /* Add padding to the container */
+    color: white; /* Set text color for the entire .ban container */
+}
+
+.ban h3 {
+    margin: 0 0 15px; /* Add spacing below the heading */
+    text-align: center; /* Center-align the heading */
+    font-size: 20px;
+	font-weight:bolder;
+    color: rgb#fff; /* Make the text explicitly white */
+}
+
+h3 b {
+    font-weight: bold;
+    color: #a44e29; /* Dark gray bold text */
+}
+
+form.float-title {
+    margin: 0;
+    padding: 0;
+    background: transparent; /* Ensure no background color */
+    border: none; /* Remove default borders */
+}
+
+.float-title {
+    display: flex;
+    flex-direction: row;
+    justify-content: left;
+    align-items: center;
+	margin: 0;
+    padding: 0;
+	border: none;
+    gap: 10px;  /*Add space between the input and label */
+    background: transparent; /* Ensure transparency for the form container */
+}
+
+input[type="text"] {
+    padding: 5px 10px; /* Add padding for better usability */
+    border: 1px solid #ccc; /* Light border */
+    border-radius: 4px; /* Rounded input field */
+    font-size: 14px;
+	background-color: #fff; /* White button for contrast */
+    color: #333; /* Green text to match the theme */
+}
+
+input[type="file"] {
+    border: 1px solid #ccc; 
+    padding: 5px 10px; 
+	font-size: 14px;
+	border-radius: 4px; 
+}
+
+input[type="submit"] {
+    padding: 6px 12px;
+    background-color: #eee; 
+    color: #333; 
+    border: 1px solid rgb(77, 180, 130); 
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+input[type="submit"]:hover {
+    background-color: rgb(92,119,130);
+    color: white;
+}
+
+/* Textarea styles */
+textarea {
+	width: 80%;
+	margin-bottom: 10px;
+	background: #AAA; 
+	border: none;
+	outline: none;
+	padding: 12px;
+	font-size: 14px;
+	color: #333;
+	border-radius: 6px;
+	box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.1);
+	transition: box-shadow 0.3s ease, background 0.3s ease;
+}
+
+textarea:focus {
+	background: #AAA;
+	box-shadow: inset 0 1px 8px rgba(0, 0, 0, 0.2);
+}
+
+textarea::placeholder {
+	color: #AAA;
+	opacity: 0.8;
+}
+
+/* general */
+.result {
+	font-size: 14px;
+	text-align: left;
+	line-height: 1.6; 
+	border: none;
+	height: 100%;
+}
+
+/* summary */
+.container {
+	display: flex;
+	background: #eee;
+	border: none;
+	/* border: 1px solid rgb(55,71,79);  */
+	width: 100%;
+	/*height: 100%;*/
+}
+
+.top-container {
+	/*border:#333;
+	border-width: 0px 0px 1px 0px;*/
+	border-bottom: 1px solid solid rgb(55,71,79);
+}
+
+.middle-container {
+	/*border:#333;
+	border-width: 1px 0px 1px 0px;*/
+	border-bottom: 1px solid solid rgb(55,71,79);
+}
+
+.bottom-container {
+	flex: 1; 
+	width: 100%;
+	border:#333;
+	/* height: 100%; */
+	padding: 5px 15px 5px 15px;
+	border-width: 1px 0px 1px 0px; /* Top, Right, Bottom, Left */
+}
+
+/* Left and right sections */
+.left-half {
+	flex: 1; 
+	width: 50%;
+	height: 100%;
+	overflow: auto;
+	border-right: 1px solid rgb(55,71,79); 
+	border-bottom: 1px solid solid rgb(55,71,79);
+	padding: 5px 15px 15px 15px;
+	box-sizing: border-box;
+	min-height: 20px;
+}
+
+.right-half {
+	flex: 1; 
+	width: 50%;
+	height: 100%;
+	overflow: auto;
+	border-left: 1px solid solid rgb(55,71,79);
+	border-bottom: 1px solid solid rgb(55,71,79);
+	padding: 5px 15px 15px 15px;
+	box-sizing: border-box;
+	min-height: 20px;
+}
+
+.nocontent {
+	color: #666; 
+	font-style: italic;
+}
+
+.vertical-left {
+    padding: 0px 15px 0px 0px; /* Optional spacing */
+	border-right: 1px solid rgb(55, 71, 79); /* Adjust thickness and color */
+}
+
+.vertical-right {
+    padding: 10px 0px 0px 15px; /* Optional spacing */
+}
+
+* {
+	box-sizing: border-box;
+}
+
+/* log */
+.group-title {
+	font-size: 14px;
+	font-weight: bold;
+	margin-top: 10px;
+	text-align: center;
+}
+
+.table-container table{
+	text-align: left;
+	margin-bottom: 20px;
+	border: 1px, 0px, 0px, 0px;
+	border-collapse: collapse;
+}
+
+.table-container th,
+.table-container td  {
+    text-align: left;
+	border: none !important;
+}
+/* login */
+.login-container {
+	flex: 1;
+	background-color: #fff;
+	padding: 2rem;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	text-align: center;
+	display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-button {
+	background-color: #4285f4;
+	color: white;
+	border: none;
+	padding: 0.75rem 1.5rem;
+	font-size: 1rem;
+	border-radius: 4px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin: 0 auto;
+}
+
+.login-button:hover {
+	background-color: #357abd;
+}
+
+.google-icon {
+	width: 20px;
+	height: 20px;
+	margin-right: 10px;
+}
+
+a {
+    text-decoration: none;  
+}
+
+/* dashboard */
+.button-container {
+    justify-content: center;  
+    flex-wrap: wrap; 
+    gap: 10px;  
+}
+
+.styled-button {
+    background-color: #4285f4; 
+    color: #fff; 
+    font-size: 16px; 
+    width: 300px; 
+    height: 30px; 
+    border: none; 
+    border-radius: 8px; 
+    display: block;
+	margin: auto;
+    align-items: center;
+    justify-content: left;
+    cursor: pointer; 
+    transition: all 0.3s ease-in-out; 
+}
+
+.styled-button:hover {
+    background-color: #357abd; 
+    transform: scale(1.05); 
+}
+
+.styled-button:active {
+    background-color: #357abd; 
+    transform: scale(0.98); }
+
+/* return  button*/
+.back-button {
+	position: fixed; 
+	bottom: 20px;  
+	right: 20px;  
+	color: #333; 
+	font-size: 16px;
+	padding: 10px 15px;
+	border-radius: 5px;
+	text-decoration: none; 
+	font-weight: bold;
+	transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.back-button:hover {
+	transform: scale(1.05); 
+}
+
+.back-button:active {
+	transform: scale(0.95); 
+}
+
+/* Container for the entire output and input */
+.sqlOutput, .sqlInput {
+    max-width: 600px; /* Limit width for better readability */
+    margin: 10px auto; /* Center the content */
+    font-family: Arial, sans-serif; /* Clean font */
+}
+
+/* Styling for the output section */
+.sqlOutput {
+	height: 20%;
+	overflow-y: auto;
+    background-color: #f1f1f1; /* Light gray background for output */
+    padding: 15px; /* Add padding for spacing */
+    border-radius: 8px; /* Rounded corners */
+    border: 1px solid #ddd; /* Subtle border */
+	box-sizing: border-box;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+    color: #333; /* Dark gray text for readability */
+}
+
+/* Styling for the input form */
+.sqlInput {
+	height: 15%;
+    display: flex; /* Flexbox for alignment */
+	align-items: flex-end; 
+    margin-top: 20px; /* Space above the input form */
+	box-sizing: border-box;
+}
+
+.sqlInput textarea {
+	flex: 1;
+	height: 100%;
+	background-color: #f1f1f1;
+    font-size: 14px; /* Font size for input */
+    border: 1px solid #ccc; /* Light gray border */
+    border-radius: 6px; /* Rounded corners */
+    resize: none; /* Disable resizing */
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1); /* Subtle inner shadow */
+    font-family: Arial, sans-serif; /* Match font with the rest of the UI */
+}
+
+.sqlInput textarea:focus {
+    outline: none; /* Remove default focus outline */
+    border-color: #007bff; /* Blue border on focus */
+    box-shadow: 0 0 4px rgba(0, 123, 255, 0.5); /* Glow effect on focus */
+}
+
+.sqlInput button {
+    margin-left: 10px; /* Align button to the right */
+	padding: 5px 10px; /* Padding for button */
+    background-color: #007bff; /* Blue background */
+    color: #fff; /* White text */
+    font-size: 14px; /* Font size for button */
+    border: none; /* Remove border */
+    border-radius: 6px; /* Rounded corners */
+    cursor: pointer; /* Pointer cursor on hover */
+    transition: background-color 0.3s ease; /* Smooth hover effect */
+}
+
+.sqlInput button:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+}
+
+.sqlInput button:focus {
+    outline: none; /* Remove default focus outline */
+    box-shadow: 0 0 4px rgba(0, 123, 255, 0.5); /* Glow effect on focus */
+}

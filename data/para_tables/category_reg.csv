@@ -1,0 +1,185 @@
+id,category,regex
+1,Auto_Reply,(?:autosvar|automatic reply).*?\n\[body\]
+2,Auto_Reply,ärendet kommer att regleras manuellt av handläggaren på
+3,Auto_Reply,ärendet kommer regleras manuellt av handläggaren på if
+4,Auto_Reply,automatisk direktreglering är tyvärr inte möjligt för denna faktura\. vi återkommer med beslut
+5,Auto_Reply,direktregleringen kunde ej göras automatiskt\. ärendet är sparat hos oss svar kommer så fort en handläggare granskat ärendet
+6,Auto_Reply,tack för ditt mejl\. vi tar hand om ditt ärende så snart vi kan
+7,Auto_Reply,vi har tagit emot direktregleringen och hanterarden så snart vi kan\. du är välkommen att ringa oss på 010-410 70 57 om du har några frågor
+8,Auto_Reply,tack för ditt mejl\W\s*vi svarar så snart vi har möjlighet
+9,Auto_Reply,kommer att svara på ditt email inom \d+ timmar
+10,Auto_Reply,återkommer till er inom \d+ arbetsdagar
+11,Auto_Reply,återkommer så snart vi fått in all information vi behöver
+12,Auto_Reply,kommer att hantera ditt ärende så snart vi kan
+13,Auto_Reply,vi har fått in dom underlag vi behöver och kommer att hantera ditt ärende inom kort
+14,Auto_Reply,tack för ditt email! \- thank you for your email!
+15,Finance_Report,här kommer underlag avseende avräkning rubricerad vecka
+16,Finance_Report,your balance report and transaction statistics with accounting number
+17,Wisentic_Error,diagnoskod saknas\. vänligen kontrollera och skicka om hela underlaget\. registrerat journalsystem är drp
+18,Wisentic_Error,ingen gällande försäkring finns\.\.? registrerat journalsystem är drp
+19,Wisentic_Error,försäkringsnumret har fel format\.
+20,Wisentic_Error,tyvärr kan ingen gällande försäkring hittas på det angivna numret\. vänligen kontrollera sifferkombinationen och\/eller om det saknas någon siffra
+21,Wisentic_Error,försäkringsnumret stämmer inte eller är felaktigt inskrivet i pdf-filen\. vänligen kontrollera och skicka om hela underlaget
+22,Wisentic_Error,gällande försäkring saknas på angivet
+23,Wisentic_Error,underlaget saknar information om diagnoser registrerat journalsystem är drp
+24,Other,emails processed spf or dkim aligned spf and dkim not aligned
+25,Other,\[subject\].*?byte till drp.*?\n\[body\]
+26,Information,\[subject\].*?(?:öppettid|stäng|driftstörning).*?\n\[body\]
+27,Information,tekniskt problem i vårt system
+28,Information,se meddelande från svedea nedan
+29,Information,hjälp oss att bli bättre
+30,Information,vi saknar ert svar
+31,Information,driftstörning(?:ar)? i vårt system
+32,Information,fungera som det ska
+33,Information,rate your conversation
+34,Information,påminnelse om viktig information
+35,Complement,beställning av förtydligande av journal
+36,Complement,beställning av journal(?:kopia)?
+37,Complement,beställning av specificerade kostnader
+38,Complement,för att gå vidare i ärendet har vi bett djurägaren inkomma med
+39,Complement,behöver ett förtydligande kunna svara på denna reglering
+40,Complement,önskar komplettering för att kunna svara på denna reglering
+41,Complement,önskar att ni specificerar kostnader
+42,Complement,undrar om ni kan skicka fullständig journal(?:kopia)? till oss
+43,Complement,vänligen återkom med färdigskriven journal
+44,Complement,vänligen komplettera med en fullständig journal
+45,Complement,(?:behöver|behöva|ta del av)\s*(?:en)?\s*(?:komplett|fullständig)?\s* journal(?:kopia)?
+46,Complement,vi skulle behöva få hjälp med nedanstående information från er
+47,Complement,vi skulle vilja ha fullständig journal
+48,Complement,för att [\wåöä ]* (?:behöva|behöver)
+49,Complement,skulle ni kunna skicka kvitto för besöket den \d\d\d\d-\d\d-\d\d på
+50,Complement,vi behöver.*?för att kunna svara på denna reglering
+51,Complement,vi behöver specade kostnader för
+52,Complement,behöver se [\wåöä ]* innan vi svarar på denna förfrågan
+53,Complement,vi önskar (?:få )?veta
+54,Complement,innan vi kan svara på denna regleringen behöver vi få veta
+55,Complement,behöv(?:er|a) (?:en )?(?:få|ha|vet(?:a)?|remiss|komplettering|be att få|fullständig|chipnr|kostnad|röntgen|färdigskriven)
+56,Complement,be er återkomma med färdigskriven journal
+57,Complement,fanns det någon kostnad
+58,Complement,vi skulle behöva [\wåöä ]* för att kunna hantera ärendet
+59,Complement,märk med komplettering av direktreglering
+60,Complement,vi behöver ett förtydligande innan vi kan direktreglera
+61,Complement,vi behöver.*?innan vi kan direktreglera
+62,Complement,för att vi ska kunna hjälpa till med direktreglering behöver vi få
+63,Complement,vi har mottagit en direktreglering gällande
+64,Complement,för att vi ska kunna fortsätta handlägga skadeärendet behöver vi ytterligare komplettering
+65,Complement,för vidare reglering av ärendet behöver vi ta del av
+66,Complement,vi behöver nedanstående komplettering
+67,Complement,inväntar komplettering från kunden för att kunna reglera
+68,Complement,här kommer önskemål om komplettering av en direktreglering
+69,Complement,vi har tagit emot en (?:skadeanmälan|livskadeanmälan) från vår kund gällande [a-zåöä\d\-\.\s]*(?:undrar om ni kan|behöver veta)
+70,Complement,för att kunna ta ställning i ersättningsfrågan.*?är vi tacksamma om
+71,Complement,vi har fått in en ersättningsansökan från en kund som varit med sitt djur hos er\. vi skulle behöva få hjälp med nedanstående information från er
+72,Complement,vi önskar ta del av fullständig journal
+73,Complement,här kommer önskemål om komplettering av en skadeanmälan
+74,Complement,märk gärna med:?.*?och FF\d+S\s
+75,Insurance_Validation_Error,manypets erbjuder inte längre djurförsäkring i sverige och vi direktreglerar inte längre skador
+76,Insurance_Validation_Error, ingen[\wåöä ]+(?:försäkring|namn|person|pn) 
+77,Insurance_Validation_Error,(?<= inte)[\wåöä ]+hitta[\wåöä ]+
+78,Insurance_Validation_Error,hittar [\wåöä ]* ingen
+79,Insurance_Validation_Error, saknas på angivet 
+80,Insurance_Validation_Error,ingen gällande försäkring på behandlingsdatum
+81,Insurance_Validation_Error,vi kan tyvärr inte finna någon försäkring här hos oss på kundens namn\/ adress
+82,Insurance_Validation_Error,tyvärr ingen match med något av personnumret eller försäkringsnumret
+83,Insurance_Validation_Error,försäkringsnumret är inte korrekt
+84,Settlement_Denied,dessvärre kan vi inte lämna ersättning för
+85,Settlement_Denied,inte lämna någon ersättning i detta ärende
+86,Settlement_Denied,nekad ersättning pga
+87,Settlement_Denied,(?:kan inte|saknar möjlighet att) direktreglera besök äldre än 7 dagar
+88,Settlement_Denied,tyvärr kan vi inte hjälpa till med direktreglering av följande skäl:
+89,Settlement_Denied,inte kan ersätta denna skada
+90,Settlement_Denied,kan inte direktreglera detta (?:besök|underlag)
+91,Settlement_Denied,kommer därför inte lämna någon ersättning just nu
+92,Settlement_Denied,måste tyvärr meddela att de ersättningsbara kostnaderna för detta besök understiger den fasta självrisken i djurets försäkring
+93,Settlement_Denied,"vår direktreglering gällande [a-zåöä]+ ser ut som följande: totalt fakturabelopp:[\d\s\-,]+kr nekad direktreglering, kund får inkomma med skadeanmälan"
+94,Settlement_Denied,kan tyvärr inte genomföra direktregleringen på
+95,Settlement_Denied,inte direktreglera denna kostnad
+96,Settlement_Denied,kan vi tyvärr inte direktreglera
+97,Settlement_Denied,försäkringen kommer inte kunna lämna ersättning för detta besök
+98,Settlement_Denied,ingen ersättning av dagens kvitto
+99,Settlement_Denied,"direktreglering gällande [^\W\d_\(\)\\\/\*\.\'""´, -]+ kan inte utföras"
+100,Settlement_Denied,saknar möjlighet att direktreglera besök äldre än 7 dagar
+101,Settlement_Denied,\s0\s*kr ersättning
+102,Settlement_Denied,"belopp att utbetala 0,00\s*kr"
+103,Settlement_Denied,ersättning klinik:\s*0
+104,Settlement_Denied,ersättning: 0\s*kr
+105,Settlement_Denied,if betalar er 0\s*kronor
+106,Settlement_Denied,sveland betalar er 0\s*kronor
+107,Settlement_Denied,"total ersättning som utbetalas: 0(?:\s*kr|,-|:-)"
+108,Settlement_Denied,utbetalt belopp: 0\s*kr
+109,Settlement_Denied,vi nekar direktreglering gällande
+110,Settlement_Approved,- belopp att ersätta :
+111,Settlement_Approved,belopp att utbetala
+112,Settlement_Approved,bifogar ersättningsbrevet nedan för
+113,Settlement_Approved,ersättning klinik:
+114,Settlement_Approved,ersättning att betala ut :
+115,Settlement_Approved,här kommer ersättningsbrevet
+116,Settlement_Approved,här kommer sammanställningen
+117,Settlement_Approved,här kommer svar på begärd direktreglering gällande
+118,Settlement_Approved,total ersättning som utbetalas:
+119,Settlement_Approved,utbetalt belopp:
+120,Settlement_Approved,"if betalar:?\s*[\d ,]+\s+kr"
+121,Settlement_Approved,vänligen notera försnr \d+
+122,Settlement_Approved,vi (?:ersätter|ers) [\d\s]+(?:kr|:-)
+123,Settlement_Approved,sveland betalar er
+124,Complement_Reply,du hittar patienthistoriken som en bifogad pdf fil
+125,Complement_Reply,här kommer efterfrågad journal
+126,Complement_Reply,här kommer efterfrågat kvitto
+127,Complement_Reply,här kommer efterfrågat kvitto\/specifikation
+128,Complement_Reply,här kommer efterfråga
+129,Complement_Reply,här kommer fullständig journal
+130,Complement_Reply,här kommer (?:journal(kopia)?|jk)
+131,Complement_Reply,här kommer[\wåöä ]*(?:journal|kvitto|specifikation|journalkopia|jk|faktura)
+132,Complement_Reply,här kommer svar på efterfrågad komplettering från kliniken
+133,Complement_Reply,vänligen se bifogad journalkopia kliniken skickat angående nedanstående ärende
+134,Complement_Reply,sätta 0 kr ersättning
+135,Settlement_Request,gällande förfrågan på djur:
+136,Settlement_Request,ersätter [a-zåäö\s\/]+upp till försäkringens maxbelopp
+137,Settlement_Request,ersätter ejkostnad för kastreringen
+138,Settlement_Request,vi har mottagit ett förhandsbesked på
+139,Settlement_Request,vi har tagit emot er förfrågan (?:gällande|angående)
+140,Message,avlivningskostnader ersätts inte\. men jag avslutar försäkringen
+141,Message,den här försäkringen är inte aktiv hos oss
+142,Message,det går bra att återbetala till
+143,Message,det här försäkringsnumret är inte i det formatet som våra försäkrinsnummer
+144,Message,det verkar som vi redan fått denna info
+145,Message,detta fnr tillhör ej oss och hittar endast en annan hund på angett pnr
+146,Message,detta svar har inte kommit in via api:et
+147,Message,e\-djur kan tyvärr inte hantera hästskador
+148,Message,jag hittade försäkringen med hjälp av den förra direktregleringen och hanterar den direkt
+149,Message,om du vill och kan vore det bra att få en lista på alla kliniker som ni har
+150,Message,se bilaga i denna mejltråd
+151,Message,vet inte om ni fått svar men direktreglering är nekad
+152,Message,vi har nu mottagit komplettering från kund och skickat beslutet om ersättning via direktregleringsportalen
+153,Message,vi har tyvärr inte kvittot\. kan det stå på mannen kanske
+154,Message,utbetald till fel klinik
+155,Message,betalningen är (?:nu )?stoppad och ni kan bortse från det ersättningsbesked som har skickats
+156,Message,har vidarebefordrat denna dir till svedea\. de kunder som tidigare haft ica-försäkring genom svedea ligger kvar hos dem och regleras av dem
+157,Message,klick här för att ange ett lösenord
+158,Message,kunden behöver godkänna detta innan vi kan gå vidare med direktregleringen
+159,Question,\*vill kund att vi räknar med tidigare besök
+160,Question,\s*vi skulle vilja veta
+161,Question,\s+vill bara dubbelkolla med er att
+162,Question,"\s+är det [^,.!;:]*\?"
+163,Question,"\s+hur[^,.!;:]*\?"
+164,Question,"\s+kan [^,.!;:]*\?"
+165,Question,"\s+när [^,.!;:]*\?"
+166,Question,"\s+ska [^,.!;:]*\?"
+167,Question,"\s+undrar om ni kan [^,.!;:]*\?"
+168,Question,"\s+vad [^,.!;:]*\?"
+169,Question,"\s+vem [^,.!;:]*\?"
+170,Question,"\s+vill ni [^,.!;:]*\?"
+171,Question,"\s+heter [^,.!;:]*\?"
+172,Question,"\s+(?:vilka|vilken) [^,.!;:]*\?"
+173,Question,"\s+har du möjlighet att [^,.!;:]*\?"
+174,Question,"\s+avser besöket något för [^,.!;:]*\?"
+175,Question,"\s+visst [^,.!;:]*\?"
+176,Spam,transcript: america this week
+177,Spam,\b(?:klubb|sex|älskare|träffas|hemlighet|dejting|impotent|lokal\sdating|bli\smedlem|coupon)\b
+178,Spam,en ny plats på webben för diskreta överenskommelser
+179,Spam,\so\strog
+180,Spam,gratis prenumeration
+181,Spam,socialt nätverk
+182,Spam,vip[\-| ]kund
+183,Spam,grupper[\wåöäÅÖÄ]* sex[\wåöäÅÖÄ]*
+184,Spam, (?:kvinna|resebyråer) 

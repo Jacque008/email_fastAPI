@@ -1,0 +1,400 @@
+id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,errandLink,payout,summaryChat,summaryEmail,summaryComment,info,logBase,logEmail,logChat,logComment,logInvoiceSP,logInvoiceFO,logInvoiceKA,logReceive,logCancel,logRemoveCancel,admin,updateClinicEmail
+1," SELECT DISTINCT 
+                            er.id AS ""errandId"" ,
+                            er.reference AS ""errandNumber"" ,
+                            er.""createdAt"" AS ""date"" ,
+                            fb.""name"" AS ""insuranceCompany"" ,
+                            c.""name"" AS ""clinicName"" ,
+                            ROUND((sums.""totalAmount"" + 50) / 100) AS ""totalAmount"",
+                            ls.""settlementAmount"" / 100 AS ""settlementAmount"", 
+                            ic.reference ,
+                            ic.""insuranceNumber"" ,
+                            ic.""damageNumber"" ,
+                            er.""invoiceReference"" ,
+                            a.""name"" AS ""animalName"" , 
+                            COALESCE(ao.""firstName"", '') || ' ' || COALESCE(ao.""lastName"", '') AS ""ownerName"" ,
+                            er.""paymentOption"" ,
+                            er.""strategyType"" ,
+                            es.settled AS ""settled"" 
+                        FROM insurance_case ic 
+                        INNER JOIN errand er ON ic.""errandId"" = er.id
+                        INNER JOIN animal a  ON ic.""animalId"" = a.id
+                        INNER JOIN animal_owner ao ON er.""animalOwnerId"" = ao.id
+                        INNER JOIN errand_status es ON er.""statusId"" = es.id
+                        INNER JOIN ( SELECT 
+                                        ""insuranceCaseId"", 
+                                        SUM(amount) AS ""totalAmount"" 
+                                    FROM insurance_case_billing_row
+                                    GROUP BY ""insuranceCaseId""
+                                  ) sums ON ic.id = sums.""insuranceCaseId""
+                        LEFT JOIN ( SELECT DISTINCT 
+                                        ist.""insuranceCaseId"",
+                                        ist.""settlementAmount""
+                                    FROM insurance_settlement ist
+                                    WHERE ist.""updatedAt"" = (
+                                          SELECT MAX(inst.""updatedAt"")
+                                          FROM insurance_settlement inst
+                                          WHERE inst.""insuranceCaseId"" = ist.""insuranceCaseId"")
+                                    ) AS ls ON ls.""insuranceCaseId"" = ic.id
+                        INNER join insurance_company_email ice ON ic.""insuranceCompanyEmailId"" = ice.id
+                        INNER JOIN insurance_company fb ON ice.""insuranceCompanyId"" = fb.id 
+                        INNER JOIN clinic c ON er.""clinicId"" = c.id
+                        WHERE {CONDITION}
+                        ORDER BY date DESC;"," SELECT DISTINCT 
+                        e.id,
+                        e.""createdAt"" ,
+                        e.""from"" ,
+                        e.""to"" ,
+                        e.subject ,
+                        e.""textPlain"" ,
+                        e.""textHtml"" ,
+                        e.""object"" ->> 'Attachments' AS ""attachments""
+                    FROM email e
+                    WHERE e.id = {EMAILID};","  SELECT DISTINCT 
+                              er.id AS ""errandId"" ,
+                              ic.reference ,
+                              c.""name"" AS ""clinicName"" ,
+                              fb.""name"" AS ""insuranceCompany""
+                          FROM insurance_case ic 
+                          JOIN errand er ON er.id = ic.""errandId"" 
+                          JOIN clinic c ON c.id = er.""clinicId"" 
+                          JOIN insurance_company_email ice ON ice.id = ic.""insuranceCompanyEmailId"" 
+                          JOIN insurance_company fb ON fb.id = ice.""insuranceCompanyId"" 
+                          WHERE {COND} ;","SELECT DISTINCT 
+                                e.id,
+                                COALESCE(e.""errandId"", (ecr.""data"" -> 'errandId'->> 0)::int) AS ""errandId"" ,
+                                ic.reference ,
+                                er.""invoiceReference"" ,
+                                ecr.""data"" ->> 'sender' AS ""sender"" ,
+                                ecr.""data"" ->> 'insuranceNumber' AS ""insuranceNumber"" ,
+                                ecr.""data"" ->> 'damageNumber' AS ""damageNumber"" ,
+                                ecr.""data"" ->> 'animalName' AS ""animalName"" ,
+                                ecr.""data"" ->> 'ownerName' AS ""ownerName"" ,
+                                ecr.""data"" ->> 'recipient' AS ""recipient"" 
+                            FROM email e 
+                            INNER JOIN email_category_request ecr ON ecr.""emailId"" = e.id
+                            LEFT JOIN errand er ON er.id = COALESCE(e.""errandId"", (ecr.""data"" -> 'errandId'->> 0)::int)
+                            LEFT JOIN insurance_case ic  ON ic.""errandId"" = e.""errandId""
+                            WHERE e.id = {ID};"," SELECT DISTINCT
+                      id, 
+                      amount , 
+                      reference , 
+                      ""rawBg""->>'info' AS ""info"" ,
+                      ""rawBg""->>'name' AS ""bankName"",
+                      ""createdAt""
+                  FROM bankgiro_payment_file_line bpfl
+                  WHERE id = {ID}
+                  ORDER BY ""createdAt"" DESC;"," SELECT 
+                        er.id AS ""errandId"",
+                        er.""createdAt"" ,
+                        er.reference AS ""errandNumber"" ,                        
+                        ic.id AS ""insuranceCaseId"" ,
+                        ic.reference AS ""isReference"",
+                        ls.""settlementAmount"", 
+                        ic.""damageNumber"" ,
+                        er.""invoiceReference"" ,
+                        er.""ocrNumber""  ,
+                        c.""name"" AS ""clinicName"" ,
+                        fb.""name"" AS ""insuranceCompanyName"" ,
+                        ic.""animalId""
+                    FROM errand er 
+                    INNER JOIN errand_status es ON er.""statusId"" = es.id
+                    INNER JOIN insurance_case ic ON ic.""errandId"" = er.id
+                    INNER JOIN clinic c ON er.""clinicId"" = c.id 
+                    INNER JOIN insurance_company_email ice ON ic.""insuranceCompanyEmailId"" = ice.id 
+                    INNER JOIN insurance_company fb ON ice.""insuranceCompanyId"" = fb.id
+                    INNER JOIN (SELECT DISTINCT 
+                                    ist.""insuranceCaseId"",
+                                    ist.""settlementAmount""
+                                FROM insurance_settlement ist
+                                WHERE ist.""updatedAt"" = (
+                                      SELECT MAX(inst.""updatedAt"")
+                                      FROM insurance_settlement inst
+                                      WHERE inst.""insuranceCaseId"" = ist.""insuranceCaseId"")
+                                ) AS ls ON ls.""insuranceCaseId"" = ic.id
+                    WHERE es.complete IS FALSE
+                          AND es.cancelled = False
+                          {CONDITION}
+                    ORDER BY er.""createdAt"" DESC;","  SELECT DISTINCT
+                          ic.id,
+                          er.reference AS ""errandNumber"",
+                          ic.reference
+                      FROM insurance_case ic 
+                      INNER JOIN errand er ON ic.""errandId"" = er.id
+                      WHERE {CONDITION};","  SELECT DISTINCT
+                    bpfl.id ,
+                    bpfl.""createdAt"" AS ""createdAt"" ,
+                    bpfl.reference ,
+                    bpfl.""transactionId"" ,
+                    bpfl.amount	,
+                    c.""name""  AS ""clinicName"" ,
+                    t.type_ AS ""type""
+                  FROM bankgiro_payout_file_line bpfl 
+                  INNER JOIN ""transaction"" t ON t.id = bpfl.""transactionId"" 
+                  INNER JOIN errand er ON er.id = t.""errandId"" 
+                  INNER JOIN clinic c  ON c.id = er.""clinicId""
+                  WHERE bpfl.""createdAt"" >= NOW() - INTERVAL '2 month'
+                  AND bpfl.type_ = 'paid'
+                  ORDER BY bpfl.""createdAt"" DESC;","SELECT DISTINCT 
+                  ic.reference ,
+                  c.type_ ,
+                  cm.""createdAt"" ,
+                  cm.message,
+                  cm.""fromAdminUserId""  ,
+                  cm.""fromClinicUserId"" ,
+                  c.""clinicId"" ,
+                  cl.""name"" AS ""clinicName"",
+                  cm.""fromInsuranceCompanyId"" ,
+                  c.""insuranceCompanyId"" ,
+                  fb.name AS ""insuranceCompanyName"" 
+              FROM chat_message cm
+              INNER JOIN chat c ON c.id = cm.""chatId""
+              INNER JOIN errand er ON er.id = c.""errandId"" 
+              INNER JOIN insurance_case ic ON ic.""errandId"" = c.""errandId""
+              LEFT JOIN clinic cl ON cl.id = c.""clinicId""
+              LEFT JOIN insurance_company fb ON fb.id = c.""insuranceCompanyId""
+              WHERE {CONDITION}
+              ORDER BY cm.""createdAt"" ;"," SELECT 
+                          e.id,
+                          e.""createdAt"",
+                          e.subject,
+                          e.""textPlain"",
+                          e.""textHtml"",
+                          e.""from"",
+                          e.""to"",
+                          e.""errandId"",
+                          e.folder ,
+                          ecr.""data"" ->> 'sender' AS ""sender"",
+                          ecr.""data"" ->> 'recipient' AS ""recipient""
+                      FROM email e
+                      LEFT JOIN email_category_request ecr ON e.id = ecr.""emailId""
+                      INNER JOIN errand er ON e.""errandId"" = er.id
+                      INNER JOIN insurance_case ic ON ic.""errandId"" = er.id
+                      WHERE {CONDITION}
+                      ORDER BY e.""createdAt"" ASC;"," SELECT 
+                              cr.""emailId"" AS ""id"", 
+                              cr.""errandId"" ,
+                              c.id AS ""commentId"",
+                              c.""createdAt"" ,
+                              c.content AS ""content"",
+                              CASE 
+                                  WHEN cr.""emailId"" IS NOT NULL THEN 'Email'
+                                  WHEN cr.""errandId"" IS NOT NULL THEN 'Errand'
+                              END AS ""type""
+                          FROM comment c
+                          INNER JOIN comment_relation cr ON c.id = cr.""commentId""
+                          LEFT JOIN email e ON cr.""emailId"" = e.id
+                          LEFT JOIN errand er ON cr.""errandId"" = er.id
+                          LEFT JOIN insurance_case ic ON ic.""errandId"" = cr.""errandId""
+                          WHERE c.""content"" IS NOT NULL
+                            AND {CONDITION}
+                          ORDER BY c.""createdAt"" ASC;","  SELECT DISTINCT 
+                    e.id,
+                    ecr.""timestamp"",
+                    ecr.""data"" ->> 'sender' AS ""sender"" ,
+                    ecr.""data"" ->> 'recipient' AS ""recipient"" ,
+                    ecr.""data"" ->> 'source' AS ""source"" ,
+                    ecr.category ,
+                    ecr.""correctedCategory"" ,
+                    e.subject 
+                FROM email_category_request ecr 
+                LEFT JOIN email e ON ecr.""emailId"" = e.id 
+                WHERE {CONDITION}
+                    AND (ecr.category = 'Information' OR ecr.""correctedCategory"" = 'Information')
+                    LIMIT 1;"," SELECT  
+                      er.id AS ""errandId"" ,
+                      er.reference AS ""errandNumber"" ,
+                      er.""createdAt"" AS ""errandCreaTime"" ,
+                      ic.id AS ""insuranceCaseId"" ,
+                      ic.reference ,
+                      ls.""settlementAmount"" ,
+                      ls.""updatedTime"" ,
+                      er.""clinicId"" ,
+                      c.name AS ""clinicName"" ,
+                      ic.id AS ""insuranceCompanyId"" ,
+                      fb.""name"" AS ""insuranceCompanyName"" ,
+                      ic.""insuranceEmailLastSent"" AS ""sendTime"" 
+                  FROM errand er 
+                  INNER JOIN insurance_case ic ON ic.""errandId"" = er.id
+                  LEFT JOIN ( SELECT DISTINCT 
+                                        ist.""insuranceCaseId"" ,
+                                        ROUND(ist.""settlementAmount"" / 100, 2) AS ""settlementAmount"" ,
+                                        ist.""updatedAt"" AS ""updatedTime""
+                                    FROM insurance_settlement ist
+                                    WHERE ist.""updatedAt"" = (
+                                          SELECT MAX(inst.""updatedAt"")
+                                          FROM insurance_settlement inst
+                                          WHERE inst.""insuranceCaseId"" = ist.""insuranceCaseId"")
+                                    ) AS ls ON ls.""insuranceCaseId"" = ic.id
+                  INNER JOIN clinic c ON c.id = er.""clinicId"" 
+                  INNER JOIN insurance_company_email ice ON ice.id = ic.""insuranceCompanyEmailId"" 
+                  INNER JOIN insurance_company fb ON fb.id = ice.""insuranceCompanyId"" 
+                  WHERE {COND1}
+                    AND {COND2}
+                  ORDER BY er.""createdAt"" DESC","SELECT  
+                      er.id AS ""errandId"" ,
+                      e.id AS ""emailId"",
+                      e.""createdAt"" AS ""emailTime"" ,
+                      e.subject ,
+                      e.""textPlain"" ,
+                      e.""textHtml"" ,
+                      ecr.category ,
+                      ecr.""correctedCategory"" ,
+                      ecr.""data"" ->> 'source' AS ""source"" 
+                  FROM errand er             
+                  INNER JOIN email e ON e.""errandId"" = er.id
+                  INNER JOIN email_category_request ecr ON ecr.""emailId"" = e.id
+                  WHERE e.folder = 'inbox'
+                    AND {COND1}
+                    AND {COND2}
+                  ORDER BY er.""createdAt"" DESC","SELECT  
+                        er.id AS ""errandId"" ,
+                        cm.id AS ""chatMessageId"" ,
+                        c.type_ AS ""chatType"",
+                        cm.""createdAt"" AS ""chatTime"" ,
+                        au.""firstName"" AS ""chatDRP"" ,
+                        cm.message ,
+                        cm.""fromClinicUserId"" AS ""chatClinic"" ,
+                        cm.""fromInsuranceCompanyId"" AS ""chatIC"" 
+                    FROM errand er  
+                    INNER JOIN chat c ON c.""errandId"" = er.id
+                    INNER JOIN chat_message cm ON cm.""chatId"" = c.id
+                    LEFT JOIN admin_user au ON cm.""fromAdminUserId"" = au.id
+                    WHERE {COND1}
+                      AND {COND2}
+                    ORDER BY er.""createdAt"" DESC","SELECT  
+                        er.id AS ""errandId"" ,
+                        cr.""commentId"" ,
+                        cr.""createdAt"" AS ""commentTime"" ,
+                        c2.""content"" ,
+                        c2.""createdByAdminId"" ,
+                        au2.""firstName"" AS ""commentDRP"" 
+                    FROM errand er 
+                    INNER JOIN comment_relation cr ON cr.""errandId"" = er.id
+                    INNER JOIN ""comment"" c2 ON c2.id = cr.""commentId"" 
+                    LEFT JOIN admin_user au2 ON c2.""createdByAdminId"" = au2.id
+                    WHERE {COND1}
+                      AND {COND2}
+                    ORDER BY er.""createdAt"" DESC","SELECT  
+                          t.""errandId"" ,
+                          t.id AS ""transactionId"" ,
+                          t.""createdAt"" AS ""transTime"" ,
+                          t.""paymentOption"" ,
+                          spo.""invoiceNumber""  ,
+	                        spo.""invoiceAmount""
+                      FROM ""transaction"" t
+                      INNER JOIN errand er on er.id = t.""errandId""
+                      INNER JOIN (SELECT sp.id, 
+                                         sp.""payeeReference"" AS ""invoiceNumber"",
+                                         ROUND(CAST(sp.""extSwedbankPayOrder"" -> 'paymentOrder' ->> 'amount' AS NUMERIC) / 100, 2) AS ""invoiceAmount"" 
+                                  FROM swedbank_pay_order sp) AS spo ON spo.id = t.""swedbankPayOrderId""
+                      WHERE t.type_ = 'customer_invoice'
+                        AND t.""paymentOption"" = 'swedbankPay'
+                        AND {COND1}
+                        AND {COND2}
+                      ORDER BY er.""createdAt"" DESC","SELECT  
+                          t.""errandId"" ,
+                          t.id AS ""transactionId"" ,
+                          t.""createdAt"" AS ""transTime"" ,
+                          t.""paymentOption"" ,
+                          f.""invoiceNumber"",
+	                        f.""invoiceAmount""
+                      FROM ""transaction"" t
+                      INNER JOIN errand er on er.id = t.""errandId""
+                      INNER JOIN (SELECT fo.id, 
+                                         fo.""fortusInvoiceNumber"" AS ""invoiceNumber"",
+                                         fo.""orderData"" ->> 'order_amount' AS ""invoiceAmount""  
+                                  FROM fortus_order fo) AS f ON f.id = t.""fortusOrderId""
+                      WHERE t.type_ = 'customer_invoice'
+                        AND t.""paymentOption"" = 'fortus'
+                        AND {COND1}
+                        AND {COND2}
+                      ORDER BY er.""createdAt"" DESC","SELECT  
+                          t.""errandId"" ,
+                          t.id AS ""transactionId"" ,
+                          t.""createdAt"" AS ""transTime"" ,
+                          t.""paymentOption"" ,
+                          ka.""invoiceNumber"" ,
+                          ka.""invoiceAmount"" 
+                      FROM ""transaction"" t 
+                      INNER JOIN errand er ON t.""errandId"" = er.id 
+                      INNER JOIN (  SELECT DISTINCT 
+                                        t.id AS ""id"",
+                                        t.reference AS ""invoiceNumber"" , 
+                                        ROUND(tl.amount / 100, 2) AS ""invoiceAmount"" 
+                                    FROM ""transaction"" t
+                                    INNER JOIN transaction_line tl ON tl.""transactionId"" = t.id
+                                    INNER JOIN account a on tl.""accountId"" = a.id
+                                    WHERE a.""ownerType"" = 'animal_owner') AS ka ON ka.""id"" = t.""customerPaymentId""
+                      WHERE t.type_ = 'customer_invoice'
+                        AND t.""paymentOption"" not in ('fortus','swedbankPay')
+                        AND {COND1}
+                        AND {COND2}
+                      ORDER BY er.""createdAt"" DESC","SELECT 
+                        t.""errandId"" ,
+                        t.id AS ""transactionId"" ,
+                        tl.""createdAt"" ,
+                        ROUND(tl.amount / 100, 2) AS ""amount"",
+                        a.""name"" ,
+                        tl.""accountingDate""
+                    FROM  transaction_line tl
+                    INNER JOIN account a ON tl.""accountId"" = a.id
+                    INNER JOIN ""transaction"" t ON tl.""transactionId"" = t.id
+                    INNER JOIN errand er on er.id = t.""errandId""
+                    INNER JOIN errand_status es ON es.id = er.""statusId"" 
+                    WHERE {COND1}
+                      AND {COND2}
+                    ORDER BY er.""createdAt"" DESC"," SELECT
+                        t.""errandId"" ,
+                        t.id AS ""transactionId"" ,
+                        t.""createdAt"" AS ""cancelTime""
+                    FROM ""transaction""  t               
+                    INNER JOIN errand er ON er.id = t.""errandId"" 
+                    INNER JOIN errand_status es ON es.id = er.""statusId"" 
+                    WHERE t.type_ = 'cancel'
+                      AND es.cancelled IS TRUE
+                      AND {COND1}
+                      AND {COND2}
+                    ORDER BY er.""createdAt"" DESC "," SELECT
+                              t.""errandId"" ,
+                              t.id AS ""transactionId"" ,
+                              t.""createdAt"" AS ""removeTime""
+                          FROM ""transaction""  t
+                          INNER JOIN errand er ON er.id = t.""errandId"" 
+                          WHERE t.type_ = 'remove_cancel'
+                            AND {COND1}
+                            AND {COND2}
+                          ORDER BY er.""createdAt"" DESC "," SELECT id, email, ""firstName""
+                FROM admin_user au
+                WHERE {COND}; "," SELECT DISTINCT 
+                                c.id AS ""clinicId"",
+                                c.""name"" AS ""clinicName"",
+                                c.""email"" AS ""clinicEmail"", 
+                                'main_email' AS ""role"",
+                                c.inactivated 
+                            FROM clinic c
+                            UNION 
+                            SELECT DISTINCT 
+                                c.id AS ""clinicId"",
+                                c.""name"" AS ""clinicName"",
+                                c.""functionEmail"" AS ""clinicEmail"",
+                                'function_email' AS ""role"",
+                                c.inactivated 
+                            FROM clinic c
+                            UNION
+                            SELECT DISTINCT 
+                                c.id AS ""clinicId"",
+                                c.""name"" AS ""clinicName"",
+                                cu.email AS ""clinicEmail"",
+                                'employee_email' AS ""role"",
+                                c.inactivated 
+                            FROM clinic c
+                            JOIN clinic_user cu ON cu.""clinicId"" = c.id
+                            WHERE cu.email IS NOT NULL
+                              AND cu.email <> c.""email""
+                              AND cu.email <> c.""functionEmail""
+                              AND cu.active = TRUE 
+                              AND cu.email NOT IN ('mail@direktregleringsportalen.se', 'support@direktregleringsportalen.se')
+                              AND cu.email NOT ILIKE '%@drp.se'
+                              AND cu.email NOT ILIKE '%@apoex.se'
+                            ORDER BY ""clinicId"";"
