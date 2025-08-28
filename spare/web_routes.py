@@ -8,9 +8,9 @@ import os
 from groq import Groq
 from typing import Optional
 
-from ...spare.email_service import EmailService, EmailSummaryRequest, EmailForwardingIn
-from ...spare.errand_service import ErrandService, ErrandLogRequest
-from ...spare.payment_service import PaymentService, PaymentMatchRequest
+from .email_service import EmailService, EmailSummaryRequest, EmailForwardingIn
+from .errand_service import ErrandService, ErrandLogRequest
+from .payment_service import PaymentService, PaymentMatchRequest
 
 router = APIRouter(tags=["web"])
 templates = Jinja2Templates(directory="templates")

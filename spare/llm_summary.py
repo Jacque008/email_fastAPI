@@ -10,8 +10,8 @@ import pandas as pd
 from typing import Dict, List, Tuple, Optional, Any
 from groq import Groq
 
-from ..services.utils import fetchFromDB
-from ..services.base_service import BaseService
+from ..app.services.utils import fetchFromDB
+from ..app.services.base_service import BaseService
 
 
 class LLMSummaryWorkflow(BaseService):

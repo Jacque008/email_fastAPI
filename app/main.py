@@ -17,8 +17,8 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
 # Import new routers
-from .routers.api_routes import router as api_router
-from .routers.web_routes import router as web_router
+from ..spare.api_routes import router as api_router
+from ..spare.web_routes import router as web_router
 
 load_dotenv()
 
@@ -448,6 +448,56 @@ async def category_api(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Email processing failed: {str(e)}"
         )
+
+@app.get("/forward")
+async def forward_page(request: Request, user=Depends(get_current_user)):
+    """Email forwarding page - GET"""
+    return templates.TemplateResponse("forward.html", {"request": request})
+
+@app.post("/forward")
+async def process_category_emails(
+    request: Request,
+    emailJsonFile: UploadFile = File(...),
+    user=Depends(get_current_user)):
+        result_dict = {}
+    if request.method == 'POST':
+      # test with file  
+        # jsonFile = request.files.get('forwardEmailInJson')  
+        # jsonList = json.load(jsonFile)
+        # item = jsonList[0]
+        # id = item['id']
+        # correctedCategory = item['correctedCategory']
+        # recipient = item['recipient']        
+      # test with single ID  
+        id = request.form.get('forwardEmailId') 
+        if id:
+            query = '''SELECT 
+                            ecr."correctedCategory",
+                            ecr."data" ->> 'recipient' AS "recipient"
+                            FROM email_category_request ecr 
+                            WHERE ecr."emailId"  = {EMAILID}''' 
+            para = fetchFromDB(query.format(EMAILID=id))
+            correctedCategory = para['correctedCategory'].iloc[0]
+            recipient = para['recipient'].iloc[0]
+            
+        if correctedCategory in pp.forwCates:
+            df = fetchFromDB(pp.emailSpecQuery.format(EMAILID=id)) 
+            email = pp.main(df)
+            
+            email['correctedCategory'] = correctedCategory
+            email['recipient'] = recipient
+            email['textHtml'] = df['textHtml'].iloc[0]
+
+            result = cf.main(email)
+            result_dict = result.to_dict(orient='records')
+
+        else:
+            abort(400,description="Denna kategori kan inte vidarebefordras.")   
+                
+    return render_template('forward.html', record_json=result_dict)     
+        
+        
+@app.post("/forward_api")
 
 @app.get("/logout")
 async def logout_page(request: Request):

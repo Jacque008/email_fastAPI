@@ -6,19 +6,19 @@ from fastapi import APIRouter, HTTPException, Depends
 import os
 from groq import Groq
 
-from ...spare.email_service import (
+from .email_service import (
     EmailService, 
     EmailSummaryRequest, 
     EmailSummaryResponse, 
     EmailForwardingIn, 
     EmailForwardingResponse
 )
-from ...spare.errand_service import (
+from .errand_service import (
     ErrandService, 
     ErrandLogRequest, 
     ErrandLogResponse
 )
-from ...spare.payment_service import (
+from .payment_service import (
     PaymentService, 
     PaymentMatchRequest, 
     PaymentMatchResponse
