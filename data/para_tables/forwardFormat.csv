@@ -1,0 +1,12 @@
+id,oldText,newText
+1,\-[\-]+,
+2,<br>###,
+3,°°°<br>,
+4,<\/li><\/ul><br><br>,</li></ul>
+5,§(<br>)+,<br>
+6,"""<b><i>Hej,<br>","<b><i>""Hej,<br><br>"
+7,<br>(<br>)+,<br><br>
+8,"\""<b><i>(<br>)*","<b><i>"""
+9,"(<br>)*</i></b>""","""</i></b>"
+10,§,
+11,<br>Mvh,<br><br>Mvh

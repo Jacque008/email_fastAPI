@@ -1,0 +1,11 @@
+{
+    "chat.mcp.serverSampling": {
+        "fastAPI/.vscode/mcp.json: filesystem": {
+            "allowedModels": [
+                "copilot/gpt-4.1",
+                "copilot/claude-3.5-sonnet",
+                "copilot/gpt-4o"
+            ]
+        }
+    }
+}

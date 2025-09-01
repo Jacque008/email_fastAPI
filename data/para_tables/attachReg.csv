@@ -1,0 +1,23 @@
+id,number,regex
+1,attach_settlementAmount,Utbetald ersättning.*?:?\s+([\d\. ]+) k?
+2,attach_settlementAmount,OBS!!.*?Vi betalar ut ([\d\. ]+) kr till er
+3,attach_settlementAmount,BETALAR UT\s*([\d\. ]+) KR TILL ER
+4,attach_settlementAmount,OBS!!!.*?Vi ersätter ([\d\. ]+)kr
+5,attach_settlementAmount,Total ersättning\s+([\d ]+)
+6,attach_totalAmount,Kvitto.*?(?:\d{4}-\d{2}-\d{2})?\s+([\d\. ]+) k?
+7,attach_totalAmount,([\d ]+)\s*Totalt belopp\s*-+
+8,attach_totalAmount,Totalt belopp\s+([\d ]+)
+9,attach_totalAmount,Totalt belopp.*?([\d ]+)\n\d{4}-\d{2}-\d{2}
+10,attch_reference,Betalningsreferens\s+\-\s+(\d+)
+11,attch_insuranceNumber,Försäkringsnummer:\s+(\d+)
+12,attch_insuranceNumber,Försäkringsnr:.*?\n.*?\n.*?\n.*?\n.*?\n(.*?)\n
+13,attch_damageNumber,Skadenummer:\s+([\w-]+\n\d+)\s
+14,attch_damageNumber,Skadenummer:\s+([\w-]+)\n
+15,attch_damageNumber,Skadenummer\s+(.*?)\n
+16,attch_damageNumber,Skadenr:?.*?\n.*?\n.*?\n.*?\n.*?\n(.*?)\n
+17,attch_animalName,Vi har fått din (?:skadeanmälan|direktreglering) för (.*?)\n?\. Här
+18,attch_animalName,Vi har tagit emot en (?:skadeanmälan|direktreglering) för (.*?)\n?\s*och vi har ersatt kostnaden enligt följande beräkning
+19,attch_animalName,Sammanställning av försäkringsersättning för (.*?)\n
+20,attch_ownerName,Sammanställning av försäkringsersättning för .*?\n(.*?)\n
+21,attch_ownerName,Skadenummer\s+.*\s+(.*)\n
+22,attch_ownerName,(^.*?)\n

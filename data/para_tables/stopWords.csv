@@ -1,0 +1,42 @@
+id,stopWords
+1,---------- Forwarded message ---------
+2,---------- Vidarebefordrat meddelande ---------
+3,<!doctype html>
+4,\[?Trygg-Hansa_Logo_RGB_Pos.jpg\]?\s+www\.trygghansa\.se<http:\/\/www\.trygghansa\.se>\s+Trygg-Hansa Försäkring filial\s+106 26 Stockholm
+5,Bolagsverket org\.nr 516403\–8662\s+Filial till Tryg Forsikring A\/S Erhvervsstyrelsen CVR-nr 24260666\s+Klausdalsbrovej 601 DK-2750 Ballerup Danmark
+6,"OBS! Detta mejl går inte att svara på, var vänliga och skicka till djurdirekt@folksam\.se Har ni frågor\? Om ni har frågor är ni välkomna att kontakta oss på telefon[\d\s-]+\. Detta telefonnummer är endast till för er djurkliniker, så att ni snabbt kan komma fram till oss\."
+7,"Växel:[\d\s-]+www\.sveland\.se\s*Postadress: Sveland Djurförsäkringar, Box 199, 221 00 Lund"
+8,\[cid:image00\d\.png@[0-9A-Z]+\.[0-9A-Z]+\] 0771-[\d\s]+\[cid:image00\d\.png@[0-9A-Z]+\.[0-9A-Z]+\] svedea\.se
+9,\[cid:image00\d\.png@[0-9A-Z]+\.[0-9A-Z]+\] Dina Försäkring AB
+10,Lapplands Djurklinik\nLuleå\n\[https:\/\/cdn2\.hubspot\.net\/hubfs\/53\/tools\/email\-signature\-generator\/icons\/phone\-icon\-2x\.png\]
+11,010-4509850<tel:010-4509850>\n\[https:\/\/cdn2\.hubspot\.net\/hubfs\/53\/tools\/email-signature-generator\/icons\/email\-icon\-2x\.png\]\nlulea@lapplandsdjurklinik\.se<mailto:lulea@lapplandsdjurklinik\.se>
+12,Telefon:[\d\s-]+E-post: djurskador@trygghansa\.se<mailto:djurskador@trygghansa\.se> | FE 380 | SE-106 56 Stockholm
+13,(E-post|Mejl): djurskador@if\.se Telefon:[\d\s-]+Vi behandlar våra kunders personuppgifter i enlighet med dataskyddsförordningen och övrig dataskydds- och försäkringslagstiftning
+14,Vi behandlar våra kunders personuppgifter i enlighet med dataskyddsförordningen och övrig dataskydds\- och försäkringslagstiftning
+15,Har du några frågor eller vill diskutera ärendet (?:är du välkommen att|kan du) ringa telefonnummer\s+[\d \-]+eller skicka (?:mejl|epost) till djurskador@if\.se
+16,Har ni frågor\?\s*Om ni har frågor är ni välkomna att kontakta oss på telefon 
+17,Öppettider: Vardagar 8\.00-17\.00\. Direktregleringen stänger 17\.00 Stängt torsdagar 09\.00-10\.00 Vid frågor kan ni ringa[\d\s-]+
+18,Wisentic support Körsbärsvägen 5 114 23 Stockholm http:\/\/www\.wisentic\.com\/ Vänliga Hälsningar Supporten
+19,"Teamet på Hedvig\s*Ⓗ\sHedvig AB\sBirger Jarlsgatan 57\sSE\-113 56 Stockholm, SWE"
+20,([\d\s-]+)?djurskador@folksam\.se<mailto:djurskador@folksam\.se> ([\d\s-]+)?Folksam Djurskador Box 735 851 21 Sundsvall
+21,[\d\s-]+\s*djurskador@folksam\.se\<mailto:djurskador@folksam\.se\>\s*Folksam Djurskador\s*Box\s*735\s*851\s*21 Sundsvall\s*www\.folksam\.se\<http:\/\/www\.folksam\.se\/\>
+22,Folksam Djurskador\s*djurskador@folksam\.se\<mailto:djurskador@folksam\.se\>\s*[\d\s-]+
+23,"Gratis rådgivning för din[ \wåöä,]+med djurförsäkring i Folksam"
+24,Telefon:[\d\s-]+Mejl: Djurskador@ica\.se<mailto:Djurskador@ica\.se> ICA Försäkring
+25,Teamet på ManyPets\. ---------------------------------------------- Direktregleringsportalen
+26,Information Ifs telefontider.\s+
+27,"\[Warning\] - This is an external email, please be cautious when opening links and attachments!"
+28,Skickat från Outlook
+29,Från:.*\nSkickat:.*\nTill:.*\nÄmne:.*(?=\n)
+30,Från:.*\nDatum:.*\nTill:.*\nÄmne:.*(?=\n)
+31,From:.*\nSent:.*\nTo:.*\nSubject:.*(?=\n)
+32,Direktregleringsportalen\s*Ser mailet konstigt ut\? Klicka här
+33,"(?<=\n)Den[\d\wåöä\-:\.,+(kl) ]+skrev[\wÅÖÄåöä\-\.\s]+(DRP)? *(<.*@.*>)?:?(?=\n)"
+34,(?<=\n)På[\d\wåöä\-: ]+CEST skrev\s+[\wÅÖÄåöä\-\.\s]+(DRP)?\s*(<.*@.*>)?:?(?=\n)
+35,(?<=\n)[\d\wåöä\-:\. ]+skrev[\wÅÖÄåöä\-\.\s]+DRP\s*(<.*@.*>)?:(?=\n)
+36,(?<=\n)[\d\-:\. ]+skrev[\wÅÖÄåöä\-\.\s]+(DRP|Direktregleringsportalen):(?=\n)
+37,(?<=\n)Den[\wåöä\d:<>@\.\s]+skrev:(?=\n)
+38,(?<=\n)On .*? wrote:
+39,"\sHälsningar,?\s"
+40,"\s(Vänligen|Hälsar),?\n"
+41,"\sVänligen,\s"

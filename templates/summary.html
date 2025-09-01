@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html >
+
+<head>
+  <meta charset="UTF-8">
+  <title>Konversationssammanfattning</title>
+  <link href='https://fonts.googleapis.com/css?family=Pacifico' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Arimo' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Hind:300' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans+Condensed:300' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" href="/static/css/style.css"> 
+  
+</head>
+
+<body>
+    <div class="ban">
+        <h3>{{ title or "Sammanfattnings-API för Chat, E-post, Kommentarer och Kombinerad Information" }}</h3>
+        <span>Ange in antingen email-ID, referens eller ärendenummer – men bara ett av dem åt gången.</span>
+        <br>
+        <div>
+            <form class="float-title" method="POST" enctype="multipart/form-data">
+            <label for="emailId">E-post ID:</label>
+            <input type="number" id="emailId" name="emailId" value="{{ emailId or '' }}"><br><br>
+    
+            <label for="reference">Referens:</label>
+            <input type="text" id="reference" name="reference" value="{{ reference or '' }}"><br><br>
+    
+            <label for="errandNumber">Ärende Nummer:</label>
+            <input type="text" id="errandNumber" name="errandNumber" value="{{ errandNumber or '' }}"><br>
+
+            <input type="submit" value="Skicka">
+            </form>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="result">
+        <div class="container">
+            <h2><b>Felmeddelande</b>:</h2>
+            <hr>
+            <p class="nocontent">{{ error }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if result %}
+    <div class="result">
+        <div class="container top-container">
+            <div class="left-half">
+                {% if result.error_chat %}
+                    <h2><b>Felmeddelande</b> :</h2>
+                    <hr>
+                    <p class="nocontent">{{ result.error_chat }}</p>
+                {% else %}
+                    <h2><b>Sammanfattning av Chat</b></h2>
+                    <hr>
+                    {% if result.summary_clinic and result.clinic_name %}
+                        <h3>Mellan <b>DRP</b> och <b>{{ result.clinic_name }}</b>:</h3>
+                        <p>{{ result.summary_clinic.replace('\n', '<br>')|safe }}</p>
+                    {% else %}
+                        <p class="nocontent">Ingen Sammanfattning Tillgänglig för Klinikchattar.</p>
+                    {% endif %}
+                    <br>
+                    {% if result.summary_ic and result.ic_name %}
+                        <h3>Mellan <b>DRP</b> och <b>{{ result.ic_name }}</b> :</h3>
+                        <p>{{ result.summary_ic.replace('\n', '<br>')|safe  }}</p>
+                    {% else %}
+                        <p class="nocontent">Ingen Sammanfattning Tillgänglig för Försäkringsbolagschattar.</p>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            <div class="right-half">
+                {% if result.error_email %}
+                    <h2><b>Felmeddelande</b> :</h2>
+                    <hr>
+                    <p class="nocontent">{{ result.error_email }}</p>
+                {% else %}
+                    <h2><b>Sammanfattning av Email</b></h2>
+                    <hr>
+                    {% if result.summary_email and result.sender and result.recipient %}
+                        <h3>Mellan <b>{{ result.sender }}</b>, <b>DRP</b> och <b>{{ result.recipient }}</b> :</h3>
+                        <p>{{ result.summary_email.replace('\n', '<br>')|safe  }}</p>
+                    {% else %}
+                        <p class="nocontent">Ingen Sammanfattning Tillgänglig för Email.</p>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="container middle-container">
+            <div class="left-half">
+                {% if result.error_comment_dr %}
+                    <h2><b>Felmeddelande</b>:</h2>
+                    <hr>
+                    <p class="nocontent">{{ result.error_comment_dr }}</p>
+                {% else %}
+                    <h2><b>Sammanfattning av DR Kommentarer</b></h2>
+                    <hr>
+                    {% if result.summary_comment_dr %}
+                        <p>{{ result.summary_comment_dr.replace('\n', '<br>')|safe }}</p>
+                    {% else %}
+                        <p class="nocontent">Ingen Sammanfattning Tillgänglig för DR Kommentarer.</p>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            <div class="right-half">
+                {% if result.error_comment_email %}
+                    <h2><b>Felmeddelande</b>:</h2>
+                    <hr>
+                    <p class="nocontent">{{ result.error_comment_email }}</p>
+                {% else %}
+                    <h2><b>Sammanfattning av Email Kommentarer</b></h2>
+                    <hr>
+                    {% if result.summary_comment_email %}
+                        <p>{{ result.summary_comment_email.replace('\n', '<br>')|safe }}</p>
+                    {% else %}
+                        <p class="nocontent">Ingen Sammanfattning Tillgänglig för Email Kommentarer.</p>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="container bottom-container">
+            {% if result.error_combine %}
+                <h2><b>Felmeddelande</b> :</h2>
+                <hr>
+                <p class="nocontent">{{ result.error_combine }}</p>
+            {% else %}
+                <h2 class="vertical-left"><b>Kombinerad Sammanfattning</b></h2>
+                {% if result.summary_combine %}
+                    <p class="vertical-right">{{ result.summary_combine.replace('\n', '<br>')|safe  }}</p>
+                {% else %}
+                    <p class="vertical-right nocontent">Ingen Kombinerad Sammanfattning Tillgänglig.</p>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>  
+    {% endif %}
+    <a href="/dashboard" class="back-button">⬅️ Dashboard</a> 
+</body>
+</html>

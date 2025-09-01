@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html >
+
+<head>
+  <meta charset="UTF-8">
+  <title>Uppdatera ChromaDB</title>
+  <link href='https://fonts.googleapis.com/css?family=Pacifico' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Arimo' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Hind:300' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans+Condensed:300' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" href="/static/css/style.css"> 
+  
+</head>
+
+<body>
+    <div class="ban">
+      <h3>Uppdatera ChromaDB</h3>
+      <form class="float-title" action="/update" method="POST" enctype="multipart/form-data">
+        <label for="labeled">Ladda upp märkt CSV-fil:&nbsp&nbsp&nbsp&nbsp</label>
+        <input type="file" name="labeled" accept=".csv" required>
+        <input type="submit" value="Skicka">
+      </form>
+    </div>
+    <div class="result container">
+        {{ table_html | safe }}
+      <ul>
+        {{record}}
+      </ul>
+    </div>
+    <a href="{{ url_for('dashboard') }}" class="back-button">⬅️ Dashboard</a> 
+</body>
+</html>

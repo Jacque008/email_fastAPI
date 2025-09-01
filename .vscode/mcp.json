@@ -1,0 +1,22 @@
+{
+    "servers": {
+      "filesystem": {
+        "command": "docker",
+        "args": [
+          "run",
+          "-i",
+          "--rm",
+          "--mount", "type=bind,src=${workspaceFolder},dst=/projects/fastAPI",
+          "mcp/filesystem",
+          "/projects"
+        ]
+      },
+      "context7": {
+        "type": "http",
+        "url": "https://mcp.context7.com/mcp",
+        "headers": {
+          "CONTEXT7_API_KEY": "ctx7sk-9de82f75-74bd-48cc-995f-ba5a3b979f1c"
+        }
+      }
+    }
+}

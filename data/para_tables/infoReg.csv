@@ -1,0 +1,12 @@
+id,item,regex
+1,sveland_extractDamageNumber,(?:Skadenummer|Skade nummer):\s*(\d+)\s*\;
+2,sveland_extractOtherNumber,(?:Skadenummer|Skade nummer):\s*\d+\s*;(?:F-)?(\d+)
+3,sveland_extractReference,(?:Skadenummer|Skade nummer):\s*\d+\s*;?\d+\D+(\d+)
+4,agria_extractDamageNumber,SKADENUMMER:\s*([\d\-]+)
+5,agria_extractOtherNumber,FAKTURANUMMER:.*?([\d-]+)
+6,dina_extractOtherNumber,(\d+)
+7,folksam_extractDamageNumber,SKADENUMMER\n(FF\d+S)
+8,folksam_extractOtherNumber,(?:FF\d+S)\n(.*?)\n
+9,if_extractDamageNumber,SKADENUMMER: (\d+)
+10,if_extractOtherNumber,(?:FAKTURA|ERSÄTTNING ENL VÅRT BREV)\n*([\d+\-]+)
+11,trygghansa_extractOtherNumber,\n#?(\d+)\n\*\*

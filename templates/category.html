@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>E-post Kategori och Anslutning</title>
+  <link href='https://fonts.googleapis.com/css?family=Pacifico' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Arimo' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Hind:300' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans+Condensed:300' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" href="/static/css/style.css"> 
+</head>
+
+<body>
+    <div class="ban">
+      <h3>E-post Kategori och Anslutning</h3>
+      
+      <!-- Display messages -->
+      {% if success_message %}
+        <div class="success-message" style="color: green; margin: 10px 0; padding: 10px; background-color: #f0f8f0; border: 1px solid #4CAF50; border-radius: 4px;">
+          ✅ {{ success_message }}
+          {% if filename %}
+            <br><small>File: {{ filename }}</small>
+          {% endif %}
+        </div>
+        
+        <!-- Processing Statistics right after success message -->
+        {% if statistics %}
+          <div class="statistics-section" style="margin: 15px 0; padding: 12px; background-color: #e8f5e8; border: 2px solid #4CAF50; border-radius: 6px;">
+            <h4 style="color: #2E7D32; margin-bottom: 12px;">📊 Processing Statistics</h4>
+            <div class="stats-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px;">
+              {% for key, value in statistics.items() %}
+                <div class="stat-item" style="padding: 8px; background-color: white; border-radius: 4px; border-left: 4px solid #4CAF50; text-align: center;">
+                  <div style="font-size: 0.75em; color: #666; text-transform: capitalize; line-height: 1.2;">{{ key.replace('_', ' ') }}</div>
+                  <div style="font-size: 1.1em; font-weight: bold; color: #2E7D32; margin-top: 2px;">{{ value }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+      {% endif %}
+      
+      {% if error_message %}
+        <div class="error-message" style="color: red; margin: 10px 0; padding: 10px; background-color: #fdf0f0; border: 1px solid #f44336; border-radius: 4px;">
+          ❌ {{ error_message }}
+        </div>
+      {% endif %}
+      
+      {% if message %}
+        <div class="info-message" style="color: blue; margin: 10px 0; padding: 10px; background-color: #f0f4ff; border: 1px solid #2196F3; border-radius: 4px;">
+          ℹ️ {{ message }}
+        </div>
+      {% endif %}
+      
+      <!-- File upload form -->
+      <form class="float-title" method="POST" enctype="multipart/form-data">
+        <label for="emailJsonFile">Ladda upp en e-post JSON-fil:&nbsp;&nbsp;&nbsp;&nbsp;</label>
+        <input type="file" name="emailJsonFile" accept=".json" required>
+        <input type="submit" value="Bearbeta">
+      </form>
+      
+      {% if total_processed %}
+        <p style="margin-top: 15px;"><strong>Totalt antal e-postmeddelanden bearbetade: {{ total_processed }}</strong></p>
+      {% endif %}
+    </div>
+    
+    <div class="result">
+      {% if record_json %}
+        <div class="results-header" style="margin: 20px 0; padding: 10px; background-color: #f5f5f5; border-radius: 4px;">
+          <h4>Bearbetningsresultat</h4>
+          <p>Visar {{ record_json|length }} bearbetade e-postmeddelanden</p>
+        </div>
+        
+        <div class="results-container" style="max-height: 600px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
+          {% for record in record_json %}
+            <div class="email-record" style="margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 4px; background-color: #fafafa;">
+              <div class="record-header" style="margin-bottom: 10px; font-weight: bold; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;">
+                E-post ID: {{ record.id or 'N/A' }}
+                {% if record.category %}
+                  | Kategori: <span style="color: #2196F3; background-color: #e3f2fd; padding: 2px 6px; border-radius: 3px;">{{ record.category }}</span>
+                {% endif %}
+                {% if record.note %}
+                  | Anteckning: <span style="color: {{ 'green' if record.note == 'Reliable' else 'orange' }}; font-weight: bold;">{{ record.note }}</span>
+                {% endif %}
+              </div>
+              
+              <div class="record-details" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9em;">
+                {% for key, value in record.items() %}
+                  {% if value is not none and value != '' and key not in ['id', 'category', 'note'] %}
+                    <div style="padding: 5px;">
+                      <strong style="color: #555;">{{ key }}:</strong>
+                      {% if key == 'errandId' and value %}
+                        <span style="color: #4CAF50; font-weight: bold;">[{{ value|join(', ') if value is iterable and value is not string else value }}]</span>
+                      {% elif key in ['settlementAmount', 'totalAmount'] and value %}
+                        <span style="color: #FF9800; font-weight: bold;">{{ value }} kr</span>
+                      {% elif key == 'isStaffAnimal' %}
+                        <span style="color: {{ 'red' if value else 'green' }}; font-weight: bold;">{{ value }}</span>
+                      {% elif key in ['from', 'sender', 'receiver'] %}
+                        <span style="color: #9C27B0;">{{ value }}</span>
+                      {% elif key == 'source' %}
+                        <span style="color: #795548; background-color: #f3e5f5; padding: 1px 4px; border-radius: 2px;">{{ value }}</span>
+                      {% else %}
+                        <span>{{ value }}</span>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}  
+          <div class="no-results" style="text-align: center; padding: 50px; color: #666;">
+            <p>📁 Inga resultat att visa.</p>
+            <p>Ladda upp en e-post JSON-fil ovan för att se bearbetade resultat här.</p>
+          </div>
+      {% endif %}
+    </div>
+    
+    <!-- Debug: 20 Random Reliable Connected Emails -->
+    {% if debug_emails %}
+      <div class="debug-section" style="margin: 30px 0; padding: 20px; background-color: #fff9c4; border: 2px solid #f57c00; border-radius: 6px;">
+        <h3 style="color: #e65100; margin-bottom: 15px;">🔍 DEBUG: 20 Slumpmässiga Pålitliga Anslutna E-postmeddelanden</h3>
+        <div class="debug-container" style="max-height: 500px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px; background-color: white;">
+          {% for email in debug_emails %}
+            <div class="debug-email" style="margin-bottom: 15px; padding: 12px; border: 1px solid #ff9800; border-radius: 4px; background-color: #fafafa;">
+              <div class="debug-header" style="font-weight: bold; color: #e65100; margin-bottom: 8px; border-bottom: 1px solid #ff9800; padding-bottom: 4px;">
+                E-post ID: {{ email.id }} | Kategori: {{ email.category }} | Ansluten via: {{ email.connectedCol }}
+              </div>
+              <div class="debug-details" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 0.85em;">
+                <div><strong>Ärende ID:</strong> {{ email.errandId }}</div>
+                <div><strong>Referens:</strong> {{ email.reference }}</div>
+                <div><strong>Försäkringsref:</strong> {{ email.insuranceCaseRef }}</div>
+                <div><strong>Uppgörelse:</strong> {{ email.settlementAmount }}</div>
+                <div><strong>Total:</strong> {{ email.totalAmount }}</div>
+                <div><strong>Djur:</strong> {{ email.animalName }}</div>
+                <div><strong>Ägare:</strong> {{ email.ownerName }}</div>
+                <div><strong>Avsändare:</strong> {{ email.sender }}</div>
+                <div><strong>Källa:</strong> {{ email.source }}</div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+    
+    <a href="/dashboard" class="back-button">⬅️ Dashboard</a> 
+</body>
+</html>

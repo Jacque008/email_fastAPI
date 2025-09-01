@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "createdAt": "2024-01-15T10:30:00Z",
+    "from": "john@clinic.se",
+    "to": "support@insurance.com",
+    "subject": "Insurance claim for Luna",
+    "textPlain": "Dear Insurance Team,\n\nI would like to submit a claim for my dog Luna. She had surgery yesterday.\n\nAnimal: Luna\nOwner: John Smith\nInsurance Number: INS-123456\nDamage Number: DAM-789\nTotal Amount: 5000 kr\nSettlement Amount: 4500 kr\n\nBest regards,\nJohn",
+    "textHtml": "<p>Dear Insurance Team,</p><p>I would like to submit a claim for my dog Luna. She had surgery yesterday.</p><p>Animal: Luna<br>Owner: John Smith<br>Insurance Number: INS-123456<br>Damage Number: DAM-789<br>Total Amount: 5000 kr<br>Settlement Amount: 4500 kr</p><p>Best regards,<br>John</p>",
+    "attachments": []
+  },
+  {
+    "id": 2,
+    "createdAt": "2024-01-15T11:45:00Z",
+    "from": "insurance@trygg-hansa.se",
+    "to": "clinic@veterinary.se",
+    "subject": "Settlement Approved - Case REF-2024-001",
+    "textPlain": "Settlement has been approved for 3500 kr.\n\nReference: REF-2024-001\nAnimal: Max\nOwner: Anna Andersson\nSettlement Amount: 3500 kr",
+    "textHtml": "<p>Settlement has been approved for 3500 kr.</p><p>Reference: REF-2024-001<br>Animal: Max<br>Owner: Anna Andersson<br>Settlement Amount: 3500 kr</p>",
+    "attachments": []
+  },
+  {
+    "id": 3,
+    "createdAt": "2024-01-15T14:20:00Z",
+    "from": "support@clinic.com", 
+    "to": "claims@folksam.se",
+    "subject": "Request for additional information",
+    "textPlain": "We need additional medical records for the claim.\n\nInsurance Number: CV-987654\nDamage Number: FF123S\nAnimal: Bella\nOwner: Erik Svensson",
+    "textHtml": "<p>We need additional medical records for the claim.</p><p>Insurance Number: CV-987654<br>Damage Number: FF123S<br>Animal: Bella<br>Owner: Erik Svensson</p>",
+    "attachments": []
+  }
+]

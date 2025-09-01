@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>E-post Vidarebefordran</title>
+  <link href='https://fonts.googleapis.com/css?family=Pacifico' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Arimo' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Hind:300' rel='stylesheet' type='text/css'>
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans+Condensed:300' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" href="/static/css/style.css"> 
+</head>
+
+<body>
+    <div class="ban">
+      <h3>E-post Vidarebefordran</h3>
+      
+      <!-- Display messages -->
+      {% if success_message %}
+        <div class="success-message" style="color: green; margin: 10px 0; padding: 10px; background-color: #f0f8f0; border: 1px solid #4CAF50; border-radius: 4px;">
+          ✅ {{ success_message }}
+        </div>
+      {% endif %}
+      
+      {% if error_message %}
+        <div class="error-message" style="color: red; margin: 10px 0; padding: 10px; background-color: #fdf0f0; border: 1px solid #f44336; border-radius: 4px;">
+          ❌ {{ error_message }}
+        </div>
+      {% endif %}
+      
+      {% if message %}
+        <div class="info-message" style="color: blue; margin: 10px 0; padding: 10px; background-color: #f0f4ff; border: 1px solid #2196F3; border-radius: 4px;">
+          ℹ️ {{ message }}
+        </div>
+      {% endif %}
+      
+      <!-- Form for email forwarding -->
+      <form class="float-title" method="POST">
+        <div style="margin-bottom: 15px;">
+          <label for="emailId">Ange E-post ID:&nbsp;&nbsp;&nbsp;&nbsp;</label>
+          <input type="number" id="emailId" name="emailId" placeholder="Ange E-post ID" value="{{ id or '' }}" required>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <label for="recipient">Mottagare:&nbsp;&nbsp;&nbsp;&nbsp;</label>
+          <input type="text" id="recipient" name="recipient" placeholder="Ange mottagarens e-post" value="{{ recipient or '' }}" required>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <label for="correctedCategory">Korrigerad Kategori:&nbsp;&nbsp;&nbsp;&nbsp;</label>
+          <select id="correctedCategory" name="correctedCategory" required>
+            <option value="">Välj kategori</option>
+            <option value="Wisentic_Error" {{ 'selected' if correctedCategory == 'Wisentic_Error' }}>Wisentic Error</option>
+            <option value="Insurance_Validation_Error" {{ 'selected' if correctedCategory == 'Insurance_Validation_Error' }}>Insurance Validation Error</option>
+            <option value="Complement_DR_Insurance_Company" {{ 'selected' if correctedCategory == 'Complement_DR_Insurance_Company' }}>Complement DR Insurance Company</option>
+            <option value="Complement_DR_Clinic" {{ 'selected' if correctedCategory == 'Complement_DR_Clinic' }}>Complement DR Clinic</option>
+            <option value="Settlement_Approved" {{ 'selected' if correctedCategory == 'Settlement_Approved' }}>Settlement Approved</option>
+            <option value="Question" {{ 'selected' if correctedCategory == 'Question' }}>Question</option>
+            <option value="Message" {{ 'selected' if correctedCategory == 'Message' }}>Message</option>
+          </select>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <label for="userId">Användar-ID (valfritt):&nbsp;&nbsp;&nbsp;&nbsp;</label>
+          <input type="number" id="userId" name="userId" placeholder="Ange användar-ID" value="{{ userId or '' }}">
+        </div>
+        
+        <input type="submit" value="Bearbeta Vidarebefordran">
+      </form>
+    </div>
+    
+    <div class="result">
+      {% if result %}
+        <div class="results-header" style="margin: 20px 0; padding: 10px; background-color: #f5f5f5; border-radius: 4px;">
+          <h4>Vidarebefordringsresultat</h4>
+          <p>E-post ID: {{ result.id }}</p>
+        </div>
+        
+        <div class="results-container" style="max-height: 600px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
+          <div class="email-record" style="margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 4px; background-color: #fafafa;">
+            <div class="record-header" style="margin-bottom: 10px; font-weight: bold; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;">
+              E-post Vidarebefordringsresultat
+              {% if result.success %}
+                | Status: <span style="color: #4CAF50; background-color: #e8f5e8; padding: 2px 6px; border-radius: 3px;">Lyckades</span>
+              {% else %}
+                | Status: <span style="color: #f44336; background-color: #fde8e8; padding: 2px 6px; border-radius: 3px;">Misslyckades</span>
+              {% endif %}
+            </div>
+            
+            <div class="record-details" style="display: grid; grid-template-columns: 1fr; gap: 15px; font-size: 0.9em;">
+              {% if result.forwardAddress %}
+                <div style="padding: 10px; background-color: white; border-radius: 4px; border: 1px solid #e0e0e0;">
+                  <strong style="color: #555;">Vidarebefordra Till:</strong>
+                  <div style="color: #9C27B0; font-weight: bold; margin-top: 5px;">{{ result.forwardAddress }}</div>
+                </div>
+              {% endif %}
+              
+              {% if result.forwardSubject %}
+                <div style="padding: 10px; background-color: white; border-radius: 4px; border: 1px solid #e0e0e0;">
+                  <strong style="color: #555;">Ämne:</strong>
+                  <div style="color: #333; margin-top: 5px; font-weight: bold;">{{ result.forwardSubject }}</div>
+                </div>
+              {% endif %}
+              
+              {% if result.forwardText %}
+                <div style="padding: 10px; background-color: white; border-radius: 4px; border: 1px solid #e0e0e0;">
+                  <strong style="color: #555;">Innehåll:</strong>
+                  <div style="color: #333; margin-top: 5px; max-height: 400px; overflow-y: auto; background-color: #f9f9f9; padding: 10px; border-radius: 3px; white-space: pre-wrap;">{{ result.forwardText }}</div>
+                </div>
+              {% endif %}
+              
+              {% if result.errorMessage %}
+                <div style="padding: 10px; background-color: #fdf0f0; border-radius: 4px; border: 1px solid #f44336;">
+                  <strong style="color: #f44336;">Felmeddelande:</strong>
+                  <div style="color: #d32f2f; margin-top: 5px;">{{ result.errorMessage }}</div>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% else %}  
+          <div class="no-results" style="text-align: center; padding: 50px; color: #666;">
+            <p>📧 Inga vidarebefordringsresultat att visa.</p>
+            <p>Ange ett E-post ID ovan för att bearbeta vidarebefordran.</p>
+          </div>
+      {% endif %}
+    </div>
+    <a href="/dashboard" class="back-button">⬅️ Dashboard</a> 
+</body>
+</html>

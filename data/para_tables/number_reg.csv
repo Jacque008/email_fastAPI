@@ -1,0 +1,82 @@
+id,number,regex
+1,settlementAmount,Total ersättning som utbetalas:\s+([\d ]+)
+2,settlementAmount,"(?:If betalar|Sveland betalar|Utbetalt belopp|Belopp att utbetala)\:?\s+([\d\, ]+)(?:,00)?"
+3,settlementAmount,"Ersättning att betala ut :\s+([\d\, ]+)(?:,00|kr)"
+4,settlementAmount,Vi (?:ersätter|ers)\s?:? ([\d ]+)
+5,settlementAmount,"Beslut för faktura #\d+\s*Regleringsnummer Försäkringsbolag Beslut[\d\s]+[\wåöäÅÖÄ ]+ ([\d,]+) kr"
+6,settlementAmount,ERSÄTTNING KLINIK:?\s+([\d ]+)
+7,settlementAmount,(?:Belopp att ersätta|Ersättning)\s?:?\s+([\d ]+)
+8,settlementAmount,Ersättning ut till klinik:\s+([\d ]+)
+9,settlementAmount,(?:Betalt|betalar) till kliniken:\s+([\d ]+)
+10,settlementAmount,(?:Ersättningsbelopp|Svarad ersättning):\s*([\d ]+)
+11,totalAmount,"Totalt fakturabelopp:\s+([\d ]+)(?:,00)?"
+12,totalAmount,Kvitton:\s+([\d ]+)
+13,totalAmount,Kvitto från \d{4}-\d{2}-\d{2}\s+([\d ]+)
+14,totalAmount,"Veterinärvård\s+([\d ]+)(?:,00)?"
+15,totalAmount,Fakturabelopp\D+([\d ]+)
+16,totalAmount,Kvitto(?: [1|2] )?\D+([\d ]+) k
+17,totalAmount,Summa att betala:?\s*([\d ]+)
+18,totalAmount,Skadespecifikation.*?:([\d ]+)
+19,totalAmount,"Skadekostnad: ([\d, ]+)"
+20,totalAmount,Totalsumma på anspråk:\s+([\d ]+)
+21,folksamOtherAmount,"Övrig kostnad\s+([\d\, ]+)(?:,00|kr)"
+22,reference,Direktregleringsportalen.*?OCR\-nummer\s*(\d+)\s
+23,reference,Beslut för faktura\s+#\d+\s+Regleringsnummer\s+Försäkringsbolag\s+Beslut\s+(\d+)
+24,reference,(?<=\[SUBJECT\]).*?(\d{10}).*?(?=\n\[BODY\])
+25,reference,(?:Direktregleringsnr\/journalnr):?.*?(\d+)
+26,reference,(?:Direktregleringsnr\/journalnr|Referensnummer:|Journalnummer|Er referens|Referens):?\s+(\d+)
+27,reference,(?:Er referens|Referens:)\s+#?(\d+)
+28,reference,\s+#?(\d+)Referens journal\/skadenummer (\d+)\/\d+\.
+29,reference,direktreglering (\d+) gällande.*?(?=\n\[BODY\])
+30,reference,Skadereglering:\s+(\d+).*?(?=\n\[BODY\])
+31,reference,Komplettering direktreglering\s+(\d+)
+32,reference,Komplettering av direktreglering\s+FF\d+S\s+\((\d+)\)
+33,reference,ert referensnummer:\s*(\d+)
+34,reference,(?:Försäkringsnummer|Djurförsäkring):\s+(\d{10})
+35,reference,Betalningsreferens: \s+(\d+)
+36,reference,\(.*?(\d{10})\).*?(?=\n\[BODY\])
+37,reference,Ärende\s+(\d{10})
+38,reference,DRP betalreferens\/ärendenummer:?\s*(\d+)
+39,reference,Saknad betalning av ersättning:\s+(\d+)
+40,insuranceNumber,Angående försäkringsfallsnr: (FF\d+S).*?(?=\n\[BODY\])
+41,insuranceNumber,Försäkringsfallsnr (FF\d+S)
+42,insuranceNumber,Direktregleringsportalen.*?Försäkringsnr:\s+([\w-]+)\s*Namn
+43,insuranceNumber,med försäkringsnummer: (\d+).*?(?=\n\[BODY\])
+44,insuranceNumber,Märk med Komplettering av direktreglering (FF\d+S)
+45,insuranceNumber,(?:Försäkringsnummer|Djurförsäkring):\s+([\w-]+)
+46,insuranceNumber,((CV|cv|KD|kd)[\d-]+).*?(?=\n\[BODY\])
+47,insuranceNumber,ingen[\wåöä ]+försäkring för .*? ([CVcvKDkd\d-]+)\s+på
+48,insuranceNumber,(?:förs[ \.]nr|försäkringsn|Försäkringsn|Försäkringn|försäkringn|försäkringsuppgift).*?(KD[\d-]+|CV[\d-]+|cv[\d-]+|[\d-]+).*?\[BODY\]
+49,insuranceNumber,\[BODY\].*?(?:förs[ \.]nr|försäkringsn|Försäkringsn|Försäkringn|försäkringn|försäkringsuppgift)[^.?!\n]*?(KD[\d-]+|CV[\d-]+|cv[\d-]+|\d[\d-]+)
+50,insuranceNumber,Försäkring:\s*([\w-]+)\s*Ägare:
+51,insuranceNumber,Faktura är avböjd i handläggarreglering \- ([\d-]+) 
+52,damageNumber,Referens journal\/skadenummer \d+\/([\d ]+)\.
+53,damageNumber,Skadenummer:?[ _]+?(([A-Za-z]+)?[0-9\- ]+)
+54,damageNumber,Vårt ärende:\s*([\d ]+)
+55,damageNumber,Angående försäkringsfallsnr: (FF\d+S).*?(?=\n\[BODY\])
+56,damageNumber,Skadespecifikation\s*(.*?)\s*\n
+57,damageNumber,Faktura är avböjd i handläggarreglering \- ([\d-]+) 
+58,animalName,"via Direktregleringsportalen.*?(?:Djur|DJUR|Djurets).*?Namn:\s*([^\W\d_\(\)\\\/\*\.\'""´, -]+)\n?.*?Djurart:"
+59,animalName,"Djurets namn:?\s*([^\W\d_\(\)\\\/\*\.\'""´, -]+)(?= Referensnummer| Journalnummer|\n)"
+60,animalName,"(?:Namn på djuret):?\s*([^\W\d_\(\)\\\.\/\*\'""´, -]+)"
+61,animalName,"(?:Namn|Djur|Djurets namn):.*?([^\W\d_\(\)\\\.\/\*\'""´, -]+)"
+62,animalName," \- [\d-]+ ((?!kr ersättning)[^\W\d_\(\)\\\/\*\.\'""´, -]+)(?=\n\[BODY\])"
+63,animalName,"gällande ([^\W\d_\(\)\\\/\*\.\'""´, -]+) med.*?(?=\n\[BODY\])"
+64,animalName,"gällande ([^\W\d_\(\)\\\/\*\.\'""´, -]+).*?som står försäkrad på"
+65,animalName,"(?:Komplettering )((?!av |direktreglering |\d+ |önskas gällande )[^\W\d_\\\/\*\.\'""´, -]+).*?(?=\n\[BODY\])"
+66,animalName,"(?:Direktreglering|Patienthistorik:) ([^\W\d_\(\)\\\/\*\.\'""´-]+).*?(?=\n\[BODY\])"
+67,animalName,"önskas för ([^\W\d_\(\)\\\/\*\.\'""´, -]+)(?: med försäkringsnummer).*?(?=\n\[BODY\])"
+68,animalName,"(?<=\[SUBJECT\])([^\W\d_\(\)\\\/\*\.\'""´,-]+) - [\d -]+(?=\n\[BODY\])"
+69,animalName,ingen[\wåöä ]+försäkring för ([^\W\d_]+) 
+70,animalName,"Vår direktreglering gällande ([^\W\d_\(\)\\\/\*\.\'""´, -]+) ser ut som följande:"
+71,animalName,Vi har fått in en direktreglering för ([^\W\d_]+)
+72,animalName,Djurnamn:\s*(.*?)\n
+73,animalName_Sveland,"(?<=\[SUBJECT\])([^\W\d_\(\)\\\.\/\*\'""´,-]+)(?=\n\[BODY\])"
+74,ownerName,Direktregleringsportalen.*?\*?Ägare\s*Namn:\s*(.*?)\s*Personnr
+75,ownerName,"Försäkringstagare\s+([^\W\d_&, -]+)"
+76,ownerName,"(?:Kund|Kundnamn):?\s+([^\W\d_, -]+)\n"
+77,ownerName,"(?<=Ägare: )([^\W\d_, -]+)"
+78,ownerName,"som står försäkrad på ((?:(?! ert journalnr|_)[^\W\d_, -]+))"
+79,ownerName,"(?:Djurägarens namn:|Ägarens namn[:\.]?)\s+([^\W\d_, -]+)"
+80,ownerName,"ingen[\wåöä ]+försäkring.*? på (?:ägaren )?([A-ZÅÖÄ][^\W\d_ ]+?)(?= och|,| angivet| \d)"
+81,ownerName,"(?:Djurägare):\s+([A-ZÅÖÄ][^\W\d_, -]+)"
