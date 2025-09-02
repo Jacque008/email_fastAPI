@@ -219,8 +219,14 @@ class Forwarder(BaseService):
     def _generate_category_specific_content(self, template: str, text: str, info: str, 
                                           admin: str, category: str, row_data: Dict) -> str:
         """Generate content based on specific category"""
-        sender = row_data.get('sender', '')
-        ref = row_data.get('reference', '')
+        sender = row_data.get('sender', '') or row_data.get('from', '') or 'Okänd avsändare'
+        ref = row_data.get('reference', '') or ''
+        
+        # Ensure we have fallback values for template formatting
+        sender = sender if sender else 'Okänd avsändare'
+        admin = admin if admin else 'Admin'
+        text = text if text else 'Inget innehåll tillgängligt'
+        info = info if info else 'Ingen ytterligare information'
         
         try:
             if category in ('Wisentic_Error', 'Insurance_Validation_Error'):
@@ -252,7 +258,12 @@ class Forwarder(BaseService):
             
         except Exception as e:
             print(f"Failed to generate category specific content: {str(e)}")
-            return template.format(EMAIL=text, INFO=info, ADMIN=admin)
+            # Fallback template with all required parameters
+            try:
+                return template.format(WHO=sender, EMAIL=text, INFO=info, ADMIN=admin, REFERENCE=ref)
+            except Exception as fallback_error:
+                print(f"Fallback template formatting also failed: {str(fallback_error)}")
+                return f"Hej {sender},\n\n{text}\n\n{info}\n\nMed vänlig hälsning,\n{admin}"
     
     def _get_provet_cloud_template(self) -> str:
         """Get Provet Cloud template"""

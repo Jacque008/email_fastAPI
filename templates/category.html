@@ -15,6 +15,21 @@
     <div class="ban">
       <h3>E-post Kategori och Anslutning</h3>
       
+      <!-- Processing Statistics - Always show at the top when available -->
+      {% if stats_data %}
+        <div class="statistics-section" style="margin: 15px 0; padding: 12px; background-color: #e8f5e8; border: 2px solid #4CAF50; border-radius: 6px;">
+          <h4 style="color: #2E7D32; margin-bottom: 12px;">📊 Processing Statistics</h4>
+          <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px;">
+            {% for key, value in stats_data.items() %}
+              <div class="stat-item" style="padding: 8px; background-color: white; border-radius: 4px; border-left: 4px solid #4CAF50; text-align: center;">
+                <div style="font-size: 0.75em; color: #666; text-transform: capitalize; line-height: 1.2;">{{ key.replace('_', ' ') }}</div>
+                <div style="font-size: 1.1em; font-weight: bold; color: #2E7D32; margin-top: 2px;">{{ value }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+      
       <!-- Display messages -->
       {% if success_message %}
         <div class="success-message" style="color: green; margin: 10px 0; padding: 10px; background-color: #f0f8f0; border: 1px solid #4CAF50; border-radius: 4px;">
@@ -23,21 +38,6 @@
             <br><small>File: {{ filename }}</small>
           {% endif %}
         </div>
-        
-        <!-- Processing Statistics right after success message -->
-        {% if statistics %}
-          <div class="statistics-section" style="margin: 15px 0; padding: 12px; background-color: #e8f5e8; border: 2px solid #4CAF50; border-radius: 6px;">
-            <h4 style="color: #2E7D32; margin-bottom: 12px;">📊 Processing Statistics</h4>
-            <div class="stats-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px;">
-              {% for key, value in statistics.items() %}
-                <div class="stat-item" style="padding: 8px; background-color: white; border-radius: 4px; border-left: 4px solid #4CAF50; text-align: center;">
-                  <div style="font-size: 0.75em; color: #666; text-transform: capitalize; line-height: 1.2;">{{ key.replace('_', ' ') }}</div>
-                  <div style="font-size: 1.1em; font-weight: bold; color: #2E7D32; margin-top: 2px;">{{ value }}</div>
-                </div>
-              {% endfor %}
-            </div>
-          </div>
-        {% endif %}
       {% endif %}
       
       {% if error_message %}

@@ -6,7 +6,7 @@ import pandas as pd
 from ..app.models.forwarding import Forwardingemail
 from ..app.models.log import ErrandLog, LogEvent, LogEventType
 from ..app.models.text_content import CombinedText, TextContent, ContentType
-from ..app.schemas.forwarding_schema import ForwardingemailRequest, ForwardingemailResponse
+from ..app.schemas.forward import ForwardingemailRequest, ForwardingemailResponse
 from .log import ErrandLogRequest, ErrandLogResponse
 from .text_content import CombinedTextRequest, CombinedTextResponse
 from .template_service import TemplateService

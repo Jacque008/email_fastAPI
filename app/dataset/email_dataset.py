@@ -1,6 +1,7 @@
 from __future__ import annotations
 import pandas as pd
 from dataclasses import dataclass, field
+from typing import Sequence
 from ..services.services import DefaultServices
 
 @dataclass
@@ -11,6 +12,14 @@ class EmailDataset:
     """
     df: pd.DataFrame
     services: DefaultServices = field(default_factory=DefaultServices)
+    
+    # Standard return columns for preprocessing
+    RETURN_COLS: Sequence[str] = (
+        'id','date','from','originSender','sender','source',
+        'to','originReceiver','receiver','sendTo','clinicCompType',
+        'reference','insuranceCaseRef','errandId','category',
+        'subject','origin','email','attachments','textHtml'
+    )
 
     def __post_init__(self):
         self.processor = self.services.get_processor()
@@ -20,6 +29,7 @@ class EmailDataset:
         self.staff_detector = self.services.get_staff_detector()
         self.extractor = self.services.get_extractor()
         self.classifier = self.services.get_classifier()
+        self.connector = self.services.get_connector()
     
     def adjust_time(self) -> "EmailDataset":
         # print("********debug in adjust_time before : ", self.df.shape, self.df.columns)
@@ -88,4 +98,58 @@ class EmailDataset:
     # Convenience: expose the underlying DataFrame explicitly
     def to_frame(self) -> pd.DataFrame:
         return self.df
+    
+    def do_preprocess(self) -> pd.DataFrame:
+        """
+        Preprocess emails: adjust_time_format -> detect_sender -> generate_email_content
+        -> detect_receiver -> vendor specials -> sort -> filter columns -> return
+        """
+        (self
+            .adjust_time()              
+            .detect_sender()
+            .generate_content()  
+            .detect_receiver()
+            .handle_vendor_specials()
+            .sort_by_date(ascending=True)
+        )
+        
+        # Ensure all required columns exist
+        for col in self.RETURN_COLS:
+            if col not in self.df.columns:
+                self.df[col] = None        
+        
+        # Filter to only return required columns
+        return self.df[list(self.RETURN_COLS)]
+    
+    def do_connect(self) -> pd.DataFrame:
+        """Categorize emails and connect them with errands."""
+        try:
+            print(f"Starting do_connect with {len(self.df)} rows")
+            
+            self.df = self.do_preprocess()
+            print(f"After preprocess: {len(self.df)} rows")
+            
+            self.df = self.classifier.initialize_columns(self.df)
+            print(f"After initialize_columns: {len(self.df)} rows")
+            
+            self.df = self.extractor.extract_numbers_from_attach(self.df)
+            print(f"After extract_numbers_from_attach: {len(self.df)} rows")
+            
+            self.df = self.extractor.extract_numbers_from_email(self.df)
+            print(f"After extract_numbers_from_email: {len(self.df)} rows")
+            
+            self.df = self.classifier.categorize_emails(self.df)
+            print(f"After categorize_emails: {len(self.df)} rows")
+            
+            self.df = self.connector.connect_with_time_windows(self.df)
+            print(f"After connect_with_time_windows: {len(self.df)} rows")
+            
+            self.df = self.classifier.refine_finalize(self.df)
+            print(f"After refine_finalize: {len(self.df)} rows")
+            
+            return self.df
+            
+        except Exception as e:
+            print(f"Error in do_connect at step: {str(e)}")
+            raise e
 
