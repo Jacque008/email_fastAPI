@@ -215,9 +215,9 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-data/other/
+data/other
 data/other/*.json
-data/test_data/
+data/test_data
 data/test_data/*.json
 # secrets
 .env

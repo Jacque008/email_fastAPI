@@ -1,9 +1,9 @@
-"""
+."""
 Workflow routes - 5 core functionality APIs based on Dashboard entry points
 """
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict
-from ..app.schemas.fw_email import ForwardingemailRequest, ForwardingemailResponse
+from ..app.schemas.forwarding_schema import ForwardingemailRequest, ForwardingemailResponse
 from .log import ErrandLogRequest, ErrandLogResponse
 from .text_content import CombinedTextRequest, CombinedTextResponse
 from ..app.schemas.email import EmailIn, EmailOut

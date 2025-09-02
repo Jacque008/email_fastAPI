@@ -2,6 +2,7 @@ import regex as reg
 import pandas as pd
 from .base_service import BaseService
 from .utils import fetchFromDB
+from typing import Optional
 
 class Classifier(BaseService):    
     def __init__(self):
@@ -97,7 +98,7 @@ class Classifier(BaseService):
         df.loc[~settle_cate_mask & reliable_note_mask, 'showPage'] = 'Mail'
         return df
     
-    def get_ic_ref(self, errandId: int) -> str:
+    def get_ic_ref(self, errandId: int) -> Optional[str]:
         errandInfo = fetchFromDB(self.errand_info_query.format(COND=f"er.id = {errandId}"))
         if not errandInfo.empty:
             return errandInfo['reference'].iloc[0]
@@ -226,9 +227,9 @@ class Classifier(BaseService):
         connected = df[df['errandId'].apply(len) > 0].shape[0]
         singleConnect = df[df['errandId'].apply(len) == 1].shape[0]
         note_values = df['note'].value_counts()
-        print(f"Debug: Note column values: {note_values.to_dict()}")
+        # print(f"Debug: Note column values: {note_values.to_dict()}")
         reliable = df[df['note']=='Reliable'].shape[0]
-        print(f"Debug: Reliable count: {reliable}")
+        # print(f"Debug: Reliable count: {reliable}")
         auto = df[df['category']!='Manual_Handling_Required'].shape[0]
         manu = df[df['category']=='Manual_Handling_Required'].shape[0]
         staff_animals = df[df['isStaffAnimal']==True].shape[0]

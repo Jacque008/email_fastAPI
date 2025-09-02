@@ -72,9 +72,9 @@ class EmailDataset:
 
     def refine_finalize(self, df: pd.DataFrame) -> pd.DataFrame:
         # print("********debug in refine_finalize before : ", self.df.shape, self.df.columns)
-        self.df = self.classifier.refine_categories(df)
+        # self.df = self.classifier.refine_categories(df)
         # print("=======debug in refine_finalize after : ", self.df.shape, self.df.columns)
-        return self.classifier.finalize_columns(self.df)
+        return self.classifier.refine_finalize(self.df)
     
     
     # --- Utilities ---------------------------------------------------------

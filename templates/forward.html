@@ -15,19 +15,7 @@
     <div class="ban">
       <h3>E-post Vidarebefordran</h3>
       
-      <!-- Display messages -->
-      {% if success_message %}
-        <div class="success-message" style="color: green; margin: 10px 0; padding: 10px; background-color: #f0f8f0; border: 1px solid #4CAF50; border-radius: 4px;">
-          ✅ {{ success_message }}
-        </div>
-      {% endif %}
-      
-      {% if error_message %}
-        <div class="error-message" style="color: red; margin: 10px 0; padding: 10px; background-color: #fdf0f0; border: 1px solid #f44336; border-radius: 4px;">
-          ❌ {{ error_message }}
-        </div>
-      {% endif %}
-      
+      <!-- Display messages -->      
       {% if message %}
         <div class="info-message" style="color: blue; margin: 10px 0; padding: 10px; background-color: #f0f4ff; border: 1px solid #2196F3; border-radius: 4px;">
           ℹ️ {{ message }}
@@ -42,27 +30,8 @@
         </div>
         
         <div style="margin-bottom: 15px;">
-          <label for="recipient">Mottagare:&nbsp;&nbsp;&nbsp;&nbsp;</label>
-          <input type="text" id="recipient" name="recipient" placeholder="Ange mottagarens e-post" value="{{ recipient or '' }}" required>
-        </div>
-        
-        <div style="margin-bottom: 15px;">
-          <label for="correctedCategory">Korrigerad Kategori:&nbsp;&nbsp;&nbsp;&nbsp;</label>
-          <select id="correctedCategory" name="correctedCategory" required>
-            <option value="">Välj kategori</option>
-            <option value="Wisentic_Error" {{ 'selected' if correctedCategory == 'Wisentic_Error' }}>Wisentic Error</option>
-            <option value="Insurance_Validation_Error" {{ 'selected' if correctedCategory == 'Insurance_Validation_Error' }}>Insurance Validation Error</option>
-            <option value="Complement_DR_Insurance_Company" {{ 'selected' if correctedCategory == 'Complement_DR_Insurance_Company' }}>Complement DR Insurance Company</option>
-            <option value="Complement_DR_Clinic" {{ 'selected' if correctedCategory == 'Complement_DR_Clinic' }}>Complement DR Clinic</option>
-            <option value="Settlement_Approved" {{ 'selected' if correctedCategory == 'Settlement_Approved' }}>Settlement Approved</option>
-            <option value="Question" {{ 'selected' if correctedCategory == 'Question' }}>Question</option>
-            <option value="Message" {{ 'selected' if correctedCategory == 'Message' }}>Message</option>
-          </select>
-        </div>
-        
-        <div style="margin-bottom: 15px;">
-          <label for="userId">Användar-ID (valfritt):&nbsp;&nbsp;&nbsp;&nbsp;</label>
-          <input type="number" id="userId" name="userId" placeholder="Ange användar-ID" value="{{ userId or '' }}">
+          <label for="userId">Användar-ID:&nbsp;&nbsp;&nbsp;&nbsp;</label>
+          <input type="number" id="userId" name="userId" placeholder="Ange användar-ID" value="{{ userId or '' }}" required>
         </div>
         
         <input type="submit" value="Bearbeta Vidarebefordran">
@@ -78,14 +47,6 @@
         
         <div class="results-container" style="max-height: 600px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
           <div class="email-record" style="margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 4px; background-color: #fafafa;">
-            <div class="record-header" style="margin-bottom: 10px; font-weight: bold; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;">
-              E-post Vidarebefordringsresultat
-              {% if result.success %}
-                | Status: <span style="color: #4CAF50; background-color: #e8f5e8; padding: 2px 6px; border-radius: 3px;">Lyckades</span>
-              {% else %}
-                | Status: <span style="color: #f44336; background-color: #fde8e8; padding: 2px 6px; border-radius: 3px;">Misslyckades</span>
-              {% endif %}
-            </div>
             
             <div class="record-details" style="display: grid; grid-template-columns: 1fr; gap: 15px; font-size: 0.9em;">
               {% if result.forwardAddress %}
@@ -109,12 +70,6 @@
                 </div>
               {% endif %}
               
-              {% if result.errorMessage %}
-                <div style="padding: 10px; background-color: #fdf0f0; border-radius: 4px; border: 1px solid #f44336;">
-                  <strong style="color: #f44336;">Felmeddelande:</strong>
-                  <div style="color: #d32f2f; margin-top: 5px;">{{ result.errorMessage }}</div>
-                </div>
-              {% endif %}
             </div>
           </div>
         </div>

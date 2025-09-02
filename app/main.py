@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict, Any
 from fastapi import FastAPI, Request, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from .services.utils import fetchFromDB
 from .schemas.email import EmailIn, EmailOut
-from .schemas.fw_email import ForwardingIn, ForwardingOut
+from .schemas.forwarding_schema import ForwardingIn, ForwardingOut
 from .workflow.create_forwarding import create_forwarding_workflow
 from .workflow.categorize_connect import CategoryConnect
 from fastapi.templating import Jinja2Templates
@@ -38,7 +38,7 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.add_middleware(
     SessionMiddleware,
-    secret_key=os.getenv("SECRET_KEY"),
+    secret_key=os.getenv("SECRET_KEY") or "fallback-session-key",
     same_site="lax", 
     https_only=False,  # Use HTTP for local development environment
     max_age=3600,  # Session expires in 1 hour
@@ -50,22 +50,28 @@ app.add_middleware(
 # app.include_router(web_router)
 
 oauth = OAuth()
-oauth.register(
-    name="google",
-    client_id=os.getenv("GOOGLE_CLIENT_ID"),
-    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    authorize_url="https://accounts.google.com/o/oauth2/v2/auth",
-    authorize_params=None,
-    access_token_url="https://oauth2.googleapis.com/token",
-    access_token_params=None,
-    refresh_token_url=None,
-    jwks_uri="https://www.googleapis.com/oauth2/v3/certs",
-    client_kwargs={
-        "scope": "openid email profile"
-    },
-)
 
-JWT_SECRET = os.getenv("JWT_SECRET")
+# Ensure OAuth credentials are available
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+
+if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
+    oauth.register(
+        name="google",
+        client_id=GOOGLE_CLIENT_ID,
+        client_secret=GOOGLE_CLIENT_SECRET,
+        authorize_url="https://accounts.google.com/o/oauth2/v2/auth",
+        authorize_params=None,
+        access_token_url="https://oauth2.googleapis.com/token",
+        access_token_params=None,
+        refresh_token_url=None,
+        jwks_uri="https://www.googleapis.com/oauth2/v3/certs",
+        client_kwargs={
+            "scope": "openid email profile"
+        },
+    )
+
+JWT_SECRET = os.getenv("JWT_SECRET") or "fallback-secret-key"
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
@@ -102,7 +108,7 @@ class AuthService:
             )
     
     @staticmethod
-    def check_email_authorization(email: str, custom_query: str = None) -> bool:
+    def check_email_authorization(email: str, custom_query: Optional[str] = None) -> bool:
         """
         Check if email is in whitelist
         
@@ -202,20 +208,24 @@ async def login_page(request: Request):
 async def login_with_google(request: Request):
     """Initiate Google OAuth login"""
     try:
+        # Check if Google OAuth is configured
+        if not hasattr(oauth, 'google') or oauth.google is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Google OAuth is not configured. Please check GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables."
+            )
+        
         redirect_uri = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback")
-        print(f"Debug: Using redirect URI: {redirect_uri}")  # Debug info
-        print(f"Debug: Google Client ID: {os.getenv('GOOGLE_CLIENT_ID')[:10]}...")  # Show partial ID
         
         # Generate and store a custom state
         import secrets
         state = secrets.token_urlsafe(32)
         request.session["oauth_state"] = state
-        print(f"Debug: Generated state: {state[:10]}...")  # Debug first 10 chars
-        print(f"Debug: Session after storing state: {list(request.session.keys())}")  # Debug session contents
         
         return await oauth.google.authorize_redirect(request, redirect_uri, state=state)
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error in login_with_google: {str(e)}")  # Debug info
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to initiate Google login: {str(e)}"
@@ -225,18 +235,12 @@ async def login_with_google(request: Request):
 async def auth_google_callback(request: Request):
     """Handle Google OAuth callback"""
     try:
-        print("Debug: Received callback from Google")  # Debug info
-        print(f"Debug: Session keys at callback: {list(request.session.keys())}")  # Debug session state
-        
         # Manual state verification
         received_state = request.query_params.get("state")
         stored_state = request.session.get("oauth_state")
-        print(f"Debug: Received state: {received_state[:10] if received_state else None}...")
-        print(f"Debug: Stored state: {stored_state[:10] if stored_state else None}...")
         
         # Verify our custom state
         if not received_state or received_state != stored_state:
-            print("Debug: Custom state verification failed")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid state parameter"
@@ -254,8 +258,8 @@ async def auth_google_callback(request: Request):
         import httpx
         token_url = "https://oauth2.googleapis.com/token"
         token_data = {
-            "client_id": os.getenv("GOOGLE_CLIENT_ID"),
-            "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
             "code": code,
             "grant_type": "authorization_code",
             "redirect_uri": os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback")
@@ -265,9 +269,7 @@ async def auth_google_callback(request: Request):
             token_response = await client.post(token_url, data=token_data)
             token_response.raise_for_status()
             token = token_response.json()
-        
-        print(f"Debug: Token received: {bool(token)}")  # Debug info
-        
+            
         # Parse ID token for verified email information
         id_token = token.get("id_token")
         if id_token:
@@ -275,15 +277,11 @@ async def auth_google_callback(request: Request):
             import jwt
             try:
                 # For Google ID tokens, we can decode without verification for getting basic claims
-                # since we got it directly from Google's token endpoint
                 claims = jwt.decode(id_token, options={"verify_signature": False})
-                print(f"Debug: Claims from ID token: email={claims.get('email')}, email_verified={claims.get('email_verified')}")
             except Exception as e:
-                print(f"Debug: Failed to decode ID token: {e}")
                 # Fallback to userinfo endpoint
                 userinfo_url = "https://www.googleapis.com/oauth2/v2/userinfo"
                 headers = {"Authorization": f"Bearer {token['access_token']}"}
-                
                 async with httpx.AsyncClient() as client:
                     userinfo_response = await client.get(userinfo_url, headers=headers)
                     userinfo_response.raise_for_status()
@@ -292,16 +290,13 @@ async def auth_google_callback(request: Request):
             # Fallback to userinfo endpoint if no ID token
             userinfo_url = "https://www.googleapis.com/oauth2/v2/userinfo"
             headers = {"Authorization": f"Bearer {token['access_token']}"}
-            
+
             async with httpx.AsyncClient() as client:
                 userinfo_response = await client.get(userinfo_url, headers=headers)
                 userinfo_response.raise_for_status()
                 claims = userinfo_response.json()
         
-        print(f"Debug: Final claims: {claims}")  # Debug info
-        
         if not claims:
-            print("Debug: No claims found in token")  # Debug info
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Failed to get user information from Google"
@@ -314,7 +309,6 @@ async def auth_google_callback(request: Request):
         picture = claims.get("picture")
         hd = claims.get("hd")  # Hosted domain (G Suite domain)
         
-        print(f"Debug: User email: {email}, verified: {email_verified}, domain: {hd}")  # Debug info
 
         if not email:
             raise HTTPException(
@@ -329,7 +323,7 @@ async def auth_google_callback(request: Request):
         is_verified = (
             email_verified is True or 
             (email_verified is None and hd) or  # G Suite domain
-            (email_verified is None and email.endswith('@gmail.com'))  # Gmail address
+            (email_verified is None and email and email.endswith('@gmail.com'))  # Gmail address
         )
         
         if not is_verified:
@@ -407,8 +401,9 @@ async def get_current_user_info(user=Depends(get_current_user)):
 
 @app.get("/admin/stats")
 async def get_stats(user=Depends(get_current_user)):
+    user_email = user.get("email") if isinstance(user, dict) else None
     return {
-        "user_email": user.get("email"),
+        "user_email": user_email,
         "total_processed": 0,  
         "last_activity": datetime.now(timezone.utc),
         "note": "Statistics endpoint - implement according to your needs"
@@ -421,9 +416,13 @@ async def get_stats(user=Depends(get_current_user)):
 @app.get("/dashboard")
 async def dashboard(request: Request, user=Depends(get_optional_current_user)):
     """Dashboard page"""
+    user_name = None
+    if user and isinstance(user, dict):
+        user_name = user.get("name")
+    
     return templates.TemplateResponse("dashboard.html", {
         "request": request, 
-        "userId": user.get("name") if user else None
+        "userId": user_name
     })
 
 @app.get("/category")
@@ -438,7 +437,7 @@ async def process_category_emails(
     user=Depends(get_current_user)):
     """Process uploaded email JSON file and return categorized results"""
     try:
-        if not emailJsonFile.filename.endswith('.json'):
+        if not (emailJsonFile.filename and emailJsonFile.filename.endswith('.json')):
             return templates.TemplateResponse("category.html", {
                 "request": request,
                 "error_message": "Only JSON files are allowed"
@@ -484,15 +483,6 @@ async def process_category_emails(
             processed_df = cc.do_connect()
 
         except Exception as debug_error:
-            error_msg = f"main: Detailed error in category processing: {str(debug_error)}"
-            import traceback
-            traceback.print_exc()
-
-            with open('/tmp/category_debug.log', 'w') as f:
-                f.write(f"{error_msg}\n")
-                f.write("Full traceback:\n")
-                traceback.print_exc(file=f)
-            
             raise debug_error
         
         # Convert to records for template display
@@ -519,20 +509,11 @@ async def process_category_emails(
                         else:
                             cleaned_row[k] = str(v) if v is not None else None
                     except Exception as item_error:
-                        print(f"Debug: Error processing key '{k}' with value '{v}' (type: {type(v)}): {str(item_error)}")
-                        # Log the problematic value
-                        if hasattr(v, 'size'):
-                            print(f"Debug: Value has size attribute: {v.size}")
-                        if hasattr(v, '__len__'):
-                            print(f"Debug: Value has length: {len(v)}")
                         raise item_error
                 
                 processed_emails.append(cleaned_row)
             
         except Exception as cleanup_error:
-            print(f"Debug: Error in data cleanup: {str(cleanup_error)}")
-            import traceback
-            traceback.print_exc()
             raise cleanup_error
         
         # Generate and display statistics
@@ -540,9 +521,8 @@ async def process_category_emails(
         try:
             stats_data = cc.classifier.statistic(processed_df)
         except Exception as stats_error:
-            print(f"Debug: Error generating statistics: {str(stats_error)}")
-        
-        # Return template with results
+            pass
+
         return templates.TemplateResponse("category.html", {
             "request": request,
             "record_json": processed_emails,
@@ -553,7 +533,6 @@ async def process_category_emails(
         })
         
     except Exception as e:
-        print(f"Error processing category emails: {str(e)}")
         return templates.TemplateResponse("category.html", {
             "request": request,
             "error_message": f"Processing failed: {str(e)}"
@@ -586,8 +565,6 @@ async def forward_page(request: Request, user=Depends(get_current_user)):
 async def process_forward_email(
     request: Request,
     emailId: Optional[int] = Form(None),
-    recipient: Optional[str] = Form(None),
-    correctedCategory: Optional[str] = Form(None),
     userId: Optional[int] = Form(None),
     user=Depends(get_current_user)
 ):
@@ -599,91 +576,82 @@ async def process_forward_email(
                 "request": request,
                 "error_message": "Email ID is required"
             })
-        
-        if not recipient:
-            return templates.TemplateResponse("forward.html", {
-                "request": request,
-                "error_message": "Recipient is required",
-                "id": emailId
-            })
-            
-        if not correctedCategory:
-            return templates.TemplateResponse("forward.html", {
-                "request": request,
-                "error_message": "Corrected category is required",
-                "id": emailId,
-                "recipient": recipient
-            })
 
-        # Create forwarding request
         forwarding_request = ForwardingIn(
             email_id=emailId,
-            recipient=recipient,
-            corrected_category=correctedCategory,
             user_id=userId
         )
-
-        # Process forwarding using workflow
+        
         workflow = create_forwarding_workflow()
         result = workflow.do_single_forwarding(forwarding_request)
 
-        # Check for errors
-        if result.error_message:
-            return templates.TemplateResponse("forward.html", {
-                "request": request,
-                "error_message": result.error_message,
-                "id": emailId,
-                "recipient": recipient,
-                "correctedCategory": correctedCategory,
-                "userId": userId
-            })
-
-        # Success case
         return templates.TemplateResponse("forward.html", {
             "request": request,
             "result": result.to_dict(),
-            "success_message": f"Successfully processed forwarding for Email ID: {emailId}",
             "id": emailId,
-            "recipient": recipient,
-            "correctedCategory": correctedCategory,
             "userId": userId
         })
 
     except Exception as e:
-        print(f"Error in process_forward_email: {str(e)}")
         return templates.TemplateResponse("forward.html", {
             "request": request,
             "error_message": f"Processing failed: {str(e)}",
             "id": emailId,
-            "recipient": recipient,
-            "correctedCategory": correctedCategory,
             "userId": userId
         })     
         
         
 @app.post("/forward_api")
 async def forwarding_api(
-    forwarding_data: Union[ForwardingIn, List[ForwardingIn]],
+    forwarding_data: Union[Dict[str, Any], List[Dict[str, Any]]],
     user=Depends(get_current_user)
-) -> Union[ForwardingOut, List[ForwardingOut]]:
-    """API endpoint for email forwarding - supports both single and batch processing"""
+) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
+    """API endpoint for email forwarding - accepts JSON with {id, userId} format"""
     try:
         workflow = create_forwarding_workflow()
         
         # Handle single request
-        if isinstance(forwarding_data, ForwardingIn):
-            result = workflow.do_single_forwarding(forwarding_data)
-            return result
+        if isinstance(forwarding_data, dict):
+            # Validate required fields
+            email_id = forwarding_data.get("id")
+            if email_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Missing required field 'id'"
+                )
+            
+            # Convert JSON dict to ForwardingIn object
+            forwarding_request = ForwardingIn(
+                email_id=int(email_id),
+                user_id=forwarding_data.get("userId")
+            )
+            result = workflow.do_single_forwarding(forwarding_request)
+            return result.to_dict()
         
         # Handle batch requests
         elif isinstance(forwarding_data, list):
-            results = workflow.do_batch_forwarding(forwarding_data)
+            results = []
+            for i, data in enumerate(forwarding_data):
+                # Validate required fields
+                email_id = data.get("id")
+                if email_id is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Missing required field 'id' in item {i}"
+                    )
+                
+                forwarding_request = ForwardingIn(
+                    email_id=int(email_id),
+                    user_id=data.get("userId")
+                )
+                result = workflow.do_single_forwarding(forwarding_request)
+                results.append(result.to_dict())
             return results
         
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid request format. Expected ForwardingIn or List[ForwardingIn]"
+                detail="Invalid request format. Expected JSON object or array with {id, userId}"
             )
             
     except Exception as e:

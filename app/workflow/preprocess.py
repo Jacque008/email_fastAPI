@@ -1,6 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 import pandas as pd
+from typing import Sequence
 from ..services.services import DefaultServices
 from ..dataset.email_dataset import EmailDataset
 
@@ -21,12 +22,11 @@ class PreProcess:
     # 'paymentOption', 'strategyType', 
     # 'folksamOtherAmount', 'totalAmount', 'attach_totalAmount', 'attach_settlementAmount', 'settlementAmount', 
     # 'animalName_Sveland', 'attach_animalName', 'animalName', 'attach_ownerName', 'ownerName'
-    # RETURN_COLS: Sequence[str] = (
-        #     'id','from','sender','source','to',
-        #     'receiver','sendTo','clinicCompType',
-        #     'reference','insuranceCaseRef','errandId','category',
-        #     
-        # )
+    RETURN_COLS: Sequence[str] = (
+            'id','date','from','originSender','sender','source',
+            'to','originReceiver','receiver','sendTo','clinicCompType',
+            'reference','insuranceCaseRef','errandId','category',
+            'subject','origin','email','attachments','textHtml')
 
     def do_preprocess(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -44,6 +44,10 @@ class PreProcess:
             .sort_by_date(ascending=True)
         )
         
+        for col in self.RETURN_COLS:
+            if col not in emails.df.columns:
+                emails.df[col] = None        
         out = emails.to_frame()
-
+        out = out[list(self.RETURN_COLS)]
+        
         return out

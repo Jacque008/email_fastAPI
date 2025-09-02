@@ -70,7 +70,8 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                                 ecr.""data"" ->> 'damageNumber' AS ""damageNumber"" ,
                                 ecr.""data"" ->> 'animalName' AS ""animalName"" ,
                                 ecr.""data"" ->> 'ownerName' AS ""ownerName"" ,
-                                ecr.""data"" ->> 'recipient' AS ""recipient"" 
+                                ecr.""data"" ->> 'recipient' AS ""receiver"" ,
+                                COALESCE(ecr.""correctedCategory"", ecr.""category"") AS ""correctedCategory""
                             FROM email e 
                             INNER JOIN email_category_request ecr ON ecr.""emailId"" = e.id
                             LEFT JOIN errand er ON er.id = COALESCE(e.""errandId"", (ecr.""data"" -> 'errandId'->> 0)::int)

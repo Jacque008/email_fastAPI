@@ -155,7 +155,7 @@ def parse_to_column(df, col='to', new_col='parsedTo'):
     exploded = df.explode(new_col)
     return exploded
  
-def base_match(text, patterns):
+def base_match(text: str, patterns: List[str]) -> Optional[str]:
     for p in map(lambda r: reg.compile(r, reg.DOTALL|reg.MULTILINE), patterns):
         matched = p.search(text)
         if matched: 

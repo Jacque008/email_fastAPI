@@ -6,39 +6,38 @@ import regex as reg
 import pandas as pd
 from typing import Dict
 from bs4 import BeautifulSoup
+from dataclasses import dataclass, field
 from html import escape
+from typing import List
 from .base_service import BaseService
 from .utils import truncate_text, base_match
 
-
+@dataclass
 class Forwarder(BaseService):
     """Content generator service for email forwarding"""
+    request_fw_sub: List[str] = field(default_factory=list)
+
+    def __post_init__(self):
+        super().__init__()  
+        self._setup_generation_configs()
     
-    # def __init__(self):
-    #     super().__init__()
-    #     self._setup_generation_configs()
-    
-    # def _setup_generation_configs(self):
-    #     """Setup content generation configurations"""
-    #     try:
-    #         fw_cates = self.forward_suggestion[self.forward_suggestion['action'].str.endswith('_Template')].action.to_list()
-    #         self.fw_cates = [item.replace('_Template', '') for item in fw_cates]
-    #         self.forward_format = pd.read_csv(f"{self.folder}/forwardFormat.csv")
-    #         self.trun_list = self.forward_suggestion[self.forward_suggestion['action']=='Trim'].templates.to_list()
-    #         self.request_fw_sub = self.forward_suggestion[self.forward_suggestion['action']=='Forward_Subject'].templates.to_list()
-    #         self.sub_list = self.forward_suggestion[self.forward_suggestion['action']=='Subject'].templates.to_list()
-    #     except Exception as e:
-    #         print(f"Failed to setup generation configs: {str(e)}")
-    #         self.forward_format = pd.DataFrame()
-    #         self.trun_list = []
-    #         self.request_fw_sub = []
-    #         self.sub_list = []
-    
+    def _setup_generation_configs(self):
+        try:
+            fw_cates = self.forward_suggestion[self.forward_suggestion['action'].str.endswith('_Template')].action.to_list()
+            self.fw_cates = [item.replace('_Template', '') for item in fw_cates]
+            self.trun_list = self.forward_suggestion[self.forward_suggestion['action']=='Trim'].templates.to_list()
+            self.sub_list = self.forward_suggestion[self.forward_suggestion['action']=='Subject'].templates.to_list()
+            self.forward_format = pd.read_csv(f"{self.folder}/forwardFormat.csv")
+            self.request_fw_sub = self.forward_suggestion[self.forward_suggestion['action']=='Forward_Subject'].templates.to_list()
+        except Exception as e:
+            print(f"Failed to setup generation configs: {str(e)}")
+            self.forward_format = pd.DataFrame()
+            
+
     def generate_forwarding_subject(self, email: str, category: str, **kwargs) -> str:
         """Generate forward subject based on email content and category"""
         try:
             forward_subject = base_match(email, self.request_fw_sub)
-            
             if pd.isna(forward_subject):
                 subject_template = self._get_category_subject_template(category)
                 if subject_template:
@@ -50,9 +49,10 @@ class Forwarder(BaseService):
             print(f"Failed to generate subject: {str(e)}")
             return ""
     
-    def generate_email_content(self, row_data: Dict, category: str, admin_name: str = '') -> str:
+    def generate_email_content(self, row_data: Dict, admin_name: str = '') -> str:
         """Generate email content based on template and data"""
         try:
+            category = row_data.get('correctedCategory', '')
             template = self._get_forwarding_content_template(category)
             email_content = row_data.get('email', '')
             processed_text = self._process_email_text(email_content, row_data.get('textHtml', ''))
@@ -199,11 +199,11 @@ class Forwarder(BaseService):
             if source == 'Clinic':
                 fields['Klinik: '] = 'sender'
                 if send_to == 'Insurance_Company':
-                    fields['Försäkringsbolag: '] = 'recipient'
+                    fields['Försäkringsbolag: '] = 'receiver'
             elif source == 'Insurance_Company':
                 fields['Försäkringsbolag: '] = 'sender'
                 if send_to == 'Clinic':
-                    fields['Klinik: '] = 'recipient'
+                    fields['Klinik: '] = 'receiver'
             
             order = ['Klinik: ','Försäkringsbolag: ','Djurförsäkring: ','SkadeNummer: ',
                     'Referens: ','Fakturanummer: ','Djurets namn: ','Ägarens namn: ']

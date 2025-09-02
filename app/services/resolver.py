@@ -464,28 +464,16 @@ class AddressResolver(BaseService):
     def __init__(self):
         super().__init__()
         self._setup_resolver_configs()
-        self._setup_resolver_queries()
         self.result = {
             'forwardAddress': '',
             'adminInfo': ''
         }
     
-    def _setup_resolver_queries(self):
-        """Setup resolver-specific queries from the queries DataFrame"""
-        try:
-            # Extract resolver-specific queries if they exist
-            if hasattr(self, 'queries'):
-                pass  # Add specific query extractions if needed
-        except Exception as e:
-            print(f"Failed to setup resolver queries: {str(e)}")
     
     def _setup_resolver_configs(self):
         try:
             self.fb_forw_add = self.fb[:17].set_index('insuranceCompany')['forwardAddress'].to_dict()
-            self.clinic_forw_add = self.clinic_list.loc[
-                self.clinic_list['role'] == 'main_email', ['clinicName','clinicEmail']
-            ].drop_duplicates()
-            
+            self.clinic_forw_add = self.clinic.loc[self.clinic['role'] == 'main_email', ['clinicName','clinicEmail']].drop_duplicates()
         except Exception as e:
             print(f"Failed to setup resolver configs: {str(e)}")
             self.fb_forw_add = {}
@@ -515,10 +503,7 @@ class AddressResolver(BaseService):
         if source == 'Clinic':
             forward_addr = self.fb_forw_add.get(receiver, "")
             if forward_addr:
-                self.result.update({
-                    'forwardAddress': forward_addr,
-                    'isValid': True
-                })
+                self.result.update({'forwardAddress': forward_addr})
         
         return self
     
@@ -531,10 +516,7 @@ class AddressResolver(BaseService):
             clinic_match = self.clinic_forw_add[self.clinic_forw_add['clinicName'] == receiver]
             if not clinic_match.empty:
                 forward_addr = clinic_match.iloc[0]['clinicEmail']
-                self.result.update({
-                    'forwardAddress': forward_addr,
-                    'isValid': True
-                })
+                self.result.update({'forwardAddress': forward_addr})
         
         return self
     

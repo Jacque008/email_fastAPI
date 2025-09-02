@@ -3,7 +3,7 @@ Forward email business object
 """
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
-from ..schemas.fw_email import ForwardingIn
+from ..schemas.forwarding_schema import ForwardingIn
 
 @dataclass
 class ForwardingEmail:
