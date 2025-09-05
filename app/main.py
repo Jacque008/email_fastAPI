@@ -33,10 +33,12 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 from .api.auth import router as auth_router
 from .api.category import router as category_router
 from .api.forwarding import router as forwarding_router
+from .api.payment import router as payment_router
 
 app.include_router(auth_router, tags=["authentication"])
 app.include_router(category_router, tags=["categorization"])
 app.include_router(forwarding_router, tags=["forwarding"])
+app.include_router(payment_router, tags=["payment"])
 
 # Root endpoint
 @app.get("/")

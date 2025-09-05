@@ -119,7 +119,7 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                     ORDER BY er.""createdAt"" DESC;","  SELECT DISTINCT
                           ic.id,
                           er.reference AS ""errandNumber"",
-                          ic.reference
+                          ic.reference AS ""reference""
                       FROM insurance_case ic 
                       INNER JOIN errand er ON ic.""errandId"" = er.id
                       WHERE {CONDITION};","  SELECT DISTINCT

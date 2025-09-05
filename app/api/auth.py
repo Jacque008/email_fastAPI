@@ -38,9 +38,16 @@ async def google_auth(request: Request):
             detail="Google OAuth is not configured"
         )
     
-    redirect_uri = request.url_for("google_callback")
+    redirect_uri = os.getenv("GOOGLE_REDIRECT_URI") or request.url_for("google_callback")
     state = os.urandom(32).hex()
+    
+    # Clear any existing state and set new one
+    request.session.clear()
     request.session["oauth_state"] = state
+    
+    print(f"DEBUG Auth - Generated state: {state}")
+    print(f"DEBUG Auth - Stored in session: {request.session.get('oauth_state')}")
+    print(f"DEBUG Auth - Using redirect_uri: {redirect_uri}")
     
     return await oauth.google.authorize_redirect(request, redirect_uri, state=state)
 
@@ -56,10 +63,33 @@ async def google_callback(request: Request):
     try:
         # Verify state parameter
         state = request.query_params.get("state")
-        if not state or state != request.session.get("oauth_state"):
+        session_state = request.session.get("oauth_state")
+        
+        print(f"DEBUG Callback - URL state: {state}")
+        print(f"DEBUG Callback - Session state: {session_state}")
+        print(f"DEBUG Callback - Session data: {dict(request.session)}")
+        
+        if not state:
+            print(f"DEBUG: No state in URL")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid state parameter"
+                detail="Missing state parameter in callback URL"
+            )
+        
+        if not session_state:
+            print(f"DEBUG: No state in session - session may have expired")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Session expired. Please try logging in again."
+            )
+            
+        if state != session_state:
+            print(f"DEBUG: State mismatch - URL: '{state}', Session: '{session_state}'")
+            # Clear the bad session state
+            request.session.clear()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Session state mismatch. Please try logging in again."
             )
         
         # Get access token

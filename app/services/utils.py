@@ -2,10 +2,11 @@ import os
 import base64
 import gspread
 import pandas as pd
-from typing import Optional, List
+from typing import Optional, List, Any
 import regex as reg
 from functools import lru_cache
 from sqlalchemy import create_engine, text
+from pydantic import BaseModel
 # from google.cloud.sql.connector import Connector, IPTypes
 # from sqlalchemy.sql import text as sqlalchemy_text
 
@@ -165,6 +166,15 @@ def base_match(text: str, patterns: List[str]) -> Optional[str]:
             return matched.group(1)
     return None   
 
+def model_to_dataframe(inputs: List[BaseModel]) -> pd.DataFrame:
+    """Convert list of PaymentIn objects to pandas DataFrame"""
+    dicts = []
+    for input in inputs:
+        dict = input.model_dump()
+        dicts.append(dict)
+    
+    return pd.DataFrame(dicts)
+    
 def check_eq(a, b):
     grp = {'Trygg-Hansa', 'Moderna Försäkringar'}
     if pd.isna(a) or pd.isna(b):
