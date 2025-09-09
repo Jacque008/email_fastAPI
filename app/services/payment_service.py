@@ -1,9 +1,9 @@
 import regex as reg
 import pandas as pd
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from itertools import combinations
 from .base_service import BaseService
-from .utils import get_payoutEntity, fetchFromDB
+from .utils import get_payoutEntity, fetchFromDB, tz_convert
 
 
 class PaymentService(BaseService):
@@ -19,7 +19,7 @@ class PaymentService(BaseService):
         self.matching_cols_pay = ['extractReference','extractOtherNumber','extractDamageNumber']
         self.matching_cols_errand = ['isReference','damageNumber','invoiceReference','ocrNumber']
         self.base_url = 'https://admin.direktregleringsportalen.se/errands/'         
-        self.payment_query = self.queries['payment'].iloc[0] 
+        # self.payment_query = self.queries['payment'].iloc[0] 
         self.errand_pay_query = self.queries['errandPay'].iloc[0] 
         self.errand_link_query = self.queries['errandLink'].iloc[0]
         
@@ -57,214 +57,177 @@ class PaymentService(BaseService):
             self._entity_dicts_cached = True
         return self._payout_entity_source, self._ic_dict, self._clinic_dict
 
-    def process_payment(self, pay: pd.DataFrame) -> pd.DataFrame:
+    def load_preprocess_database(self) -> Tuple[pd.DataFrame, Dict[str, Dict[str, List[int]]], pd.DataFrame]:
+        errand = fetchFromDB(self.errand_pay_query.format(CONDITION="AND es.complete IS FALSE"))
+        errand = tz_convert(errand, 'createdAt')
+        errand['settlementAmount'] = errand['settlementAmount'].fillna(0).astype(float)
+        errand_lookup = {}
+        for col in self.matching_cols_errand:
+            if col in errand.columns:
+                s = errand[col]
+                notna_mask = s.notna()
+                if notna_mask.any():
+                    filtered_s = s[notna_mask]
+                    groups = filtered_s.groupby(filtered_s).indices  
+                    errand_lookup[col] = {val: filtered_s.index.take(pos_arr).tolist()
+                        for val, pos_arr in groups.items()}
+                    
+        payout = fetchFromDB(self.payout_query)
+        if not payout.empty:
+            payout['reference'] = payout['reference'].astype(str)
+        
+        return errand, errand_lookup, payout
+    
+    def init_payment(self, pay: pd.DataFrame) -> pd.DataFrame:
         """Process payment data - extract references and initialize columns"""
-        pay['createdAt'] = pd.to_datetime(pay['createdAt'], utc=True).dt.tz_convert('Europe/Stockholm') 
-
-        # Use pre-compiled regex pattern
-        pay.loc[pay['reference'].notna(),'extractReference'] = pay.loc[pay['reference'].notna(),'reference'].apply(
-            lambda x: ''.join(self.ref_reg.findall(x)) if isinstance(x, str) else None
-        )
+        # pay['createdAt'] = pd.to_datetime(pay['createdAt'], utc=True).dt.tz_convert('Europe/Stockholm') 
+        pay = tz_convert(pay, 'createdAt')
+        mask = pay['reference'].notna()
+        if mask.any():
+            pay.loc[mask,'extractReference'] = pay.loc[mask,'reference'].apply(lambda x: ''.join(self.ref_reg.findall(x)) if isinstance(x, str) else None)
         pay.loc[pay['extractReference'].notna(),'extractReference'] = pay.loc[pay['extractReference'].notna(),'extractReference'].replace('', None)
         pay['settlementAmount'] = 0
         pay['status'] = ""
 
-        # Initialize columns for info parsing
         for col in self.info_item_list:
             colName = col.split('_')[1]
             if colName not in pay.columns:
                 pay[colName] = None
         
-        # Initialize list columns
-        init_columns = ['valPay', 'valErrand', 'isReference', 'insuranceCaseId', 'referenceLink']
+        init_columns = ['val_pay', 'val_errand', 'isReference', 'relevantReference', 'insuranceCaseId', 'referenceLink']
         for col in init_columns:
             pay[col] = [[] for _ in range(len(pay))]
         
-        return pay[['id','valPay','valErrand','amount','settlementAmount','isReference','insuranceCaseId','referenceLink',
+        return pay[['id','val_pay','val_errand','amount','settlementAmount','isReference','insuranceCaseId','referenceLink',
                     'status','extractReference','extractDamageNumber','extractOtherNumber','bankName','info','reference','createdAt']]
 
     def parse_info(self, pay: pd.DataFrame) -> pd.DataFrame:
         """Parse payment info field using regex patterns - optimized with pre-compiled patterns"""
         mask = pay['info'].notna()
-        for idxPay, rowPay in pay[mask].iterrows():
-            ic = self.bank_dict.get(rowPay['bankName'], 'None') 
-            mask_info = self.info_reg['item'].str.startswith(ic)
+        for idx, row_pay in pay.loc[mask].iterrows():
+            fb = self.bank_dict.get(row_pay['bankName'], 'None') 
+            mask_info = self.info_reg['item'].str.startswith(fb)
             for _, rowInfoReg in self.info_reg[mask_info].iterrows():
                 col = rowInfoReg['item'].split('_')[1]  
                 item = rowInfoReg['item']
-                
-                # Use pre-compiled pattern
                 compiled_pattern = self._precompiled_patterns.get(item)
                 if compiled_pattern is None:
                     continue
                     
-                match = compiled_pattern.search(rowPay['info'])
+                match = compiled_pattern.search(row_pay['info'])
                 if match:
                     matched_value = match.group(1).strip()
-                    if col not in rowPay or pd.isna(rowPay.get(col)):
-                        pay.at[idxPay, col] = matched_value
+                    if col not in row_pay or pd.isna(row_pay.get(col)):
+                        pay.at[idx, col] = matched_value
                     else:
-                        pay.at[idxPay, 'isReference'].append(matched_value)
+                        pay.at[idx, 'isReference'].append(matched_value)
                                 
         # Clean up duplicates
         pay.loc[pay['extractDamageNumber'] == pay['extractOtherNumber'], 'extractDamageNumber'] = None
         pay.loc[pay['extractReference'] == pay['extractOtherNumber'], 'extractOtherNumber'] = None
         pay.loc[pay['extractReference'] == pay['extractDamageNumber'], 'extractDamageNumber'] = None
-        
+        print("\n========= after parse_info ============\n", pay.iloc[0])
         return pay
 
-    def find_matches(self, pay: pd.DataFrame, errand: pd.DataFrame, idxPay: Any, rowPay: pd.Series) -> List[int]:
-        """Find matching insurance case IDs for a payment - optimized with vectorized operations"""
-        matched = {colPay: [] for colPay in self.matching_cols_pay}
+    def match_by_info(self, pay: pd.DataFrame, errand: pd.DataFrame, errand_lookup: Dict[str, Dict[str, List[int]]]) -> pd.DataFrame:
+        mask = (pay['info'].notna() | pay['extractReference'].notna())
         
-        # Filter errands by date first
-        errand_filtered = errand[errand['createdAt'] <= rowPay['createdAt']].copy()
-        if errand_filtered.empty:
-            return []
-        
-        # Fill NaN settlement amounts
-        errand_filtered['settlementAmount'] = errand_filtered['settlementAmount'].fillna(0)
-        
-        for colPay in self.matching_cols_pay:
-            valPay = rowPay[colPay]
-            if pd.notna(valPay):
-                valAmount = rowPay['amount']
-                str_valPay = str(valPay)
-                
-                # Create boolean masks for all errand columns at once
-                matches_mask = pd.Series(False, index=errand_filtered.index)
-                for colErrand in self.matching_cols_errand:
-                    col_mask = (errand_filtered[colErrand].notna() & 
-                               (errand_filtered[colErrand].astype(str) == str_valPay))
-                    matches_mask |= col_mask
-                
-                if matches_mask.any():
-                    matched_errands = errand_filtered[matches_mask]
-                    
-                    # Update pay DataFrame with matched references (vectorized)
-                    current_refs = set(str(ref) for ref in pay.at[idxPay, 'isReference'])
-                    new_refs = matched_errands['isReference'].astype(str).tolist()
-                    for ref in new_refs:
-                        if ref not in current_refs:
-                            pay.at[idxPay, 'isReference'].append(ref)
-                            pay.at[idxPay, 'valPay'].append(str_valPay)
-                            current_refs.add(ref)
-                    
-                    # Find amount matches (vectorized)
-                    amount_mask = (matched_errands['settlementAmount'] == valAmount)
-                    if amount_mask.any():
-                        matched_case_ids = matched_errands[amount_mask]['insuranceCaseId'].astype(int).tolist()
-                        matched[colPay].extend([cid for cid in matched_case_ids if cid not in matched[colPay]])
-                        
-                        # Update valErrand list
-                        matched_vals = matched_errands[amount_mask][self.matching_cols_errand].values.flatten()
-                        for val in matched_vals:
-                            if pd.notna(val):
-                                pay.at[idxPay, 'valErrand'].append(str(val))
-        
-        # Optimize set operations
-        matchedLists = [set(matched[colPay]) for colPay in self.matching_cols_pay if matched[colPay]]
-        if matchedLists:
-            # Get intersection first, then union if needed
-            matchedInsuranceCaseID = list(set.intersection(*matchedLists)) if len(matchedLists) > 1 else list(matchedLists[0])
-            if not matchedInsuranceCaseID:
-                matchedInsuranceCaseID = list(set.union(*matchedLists))
-        else:
-            matchedInsuranceCaseID = []
-        
-        return matchedInsuranceCaseID
-
-    def generate_links(self, colList1: List[Any], colList2: List[Any], condition: str) -> List[str]:
-        """Generate HTML links for matched references - optimized with batch query"""
-        links = []
-        if len(colList1) == 0:
-            return links
-            
-        # Batch query instead of individual queries
-        if condition == 'ic.reference':
-            # Create IN clause for batch query
-            ids_str = ', '.join([f"'{id}'" for id in colList1])
-            condition_sql = f"{condition} IN ({ids_str})"
-        elif condition == 'ic.id':
-            # Create IN clause for batch query  
-            ids_str = ', '.join([str(id) for id in colList1])
-            condition_sql = f"{condition} IN ({ids_str})"   
-        else:
-            return links
-            
-        # Single batch query
-        try:
-            result = fetchFromDB(self.errand_link_query.format(CONDITION=condition_sql))
-            # Create lookup dictionary for fast access
-            if not result.empty:
-                if condition == 'ic.reference':
-                    # Don't include 'reference' in columns selection since it's now the index
-                    lookup = result.set_index('reference')[['errandNumber']].to_dict('index')
-                    # Add reference back to each row data
-                    for ref_key in lookup:
-                        lookup[ref_key]['reference'] = ref_key
+        for idx, row_pay in pay.loc[mask].iterrows():
+            matched_ic_ids = self._find_matches(pay, errand, errand_lookup, idx, row_pay)
+            qty = len(matched_ic_ids)
+            if qty > 0:
+                pay.at[idx, 'insuranceCaseId'].extend(matched_ic_ids) 
+                links = self._generate_links(row_pay['insuranceCaseId'], row_pay['val_errand'], 'ic.id')
+                pay.at[idx, 'referenceLink'] = links
+                if qty == 1:
+                    pay.at[idx, 'status'] = f"One DR matched perfectly (reference: {', '.join(links)})."
                 else:
-                    lookup = result.set_index('id')[['errandNumber', 'reference']].to_dict('index')
-
-                # Generate links in order
-                for id, valErrand in zip(colList1, colList2):
-                    if id in lookup:
-                        row_data = lookup[id]
-                        errandNumber = row_data['errandNumber']
-                        ref = row_data['reference'] 
-                        link = f'<a href="{self.base_url}{errandNumber}" target="_blank" style="background-color: gray; color: white; padding: 2px 5px;" title="matched by {valErrand}">{ref}</a>'
-                        links.append(link)
-                    else:
-                        links.append(f'{id} (No Corresponding Link)')
+                    pay.at[idx, 'status'] = (f"Found {qty} matching DRs (references: {', '.join(links)}) "
+                                             f"and the payment amount matches each one.")
             else:
-                # No results found
-                links = [f'{id} (No Corresponding Link)' for id in colList1]
+                pay.at[idx, 'status'] = 'No Found'
+        
+        return pay
+    
+    def _find_matches(self, pay: pd.DataFrame, errand: pd.DataFrame, errand_lookup: Dict[str, Dict[str, List[int]]], idx, row_pay: pd.Series) -> List[int]:
+        matched = {col_pay: [] for col_pay in self.matching_cols_pay}
+        date_mask = (errand['createdAt'] <= row_pay['createdAt'])
+        if not date_mask.any():
+            return []
+
+        val_amount = row_pay['amount']
+
+        for col_pay in self.matching_cols_pay:
+            val_pay = row_pay[col_pay]
+            if pd.isna(val_pay):
+                continue
+
+            for col_errand in self.matching_cols_errand:
+                indices = errand_lookup.get(col_errand, {}).get(val_pay, [])
+                if not indices:
+                    continue
                 
-        except Exception as e:
-            # Fallback to individual queries if batch fails
-            print(f"Batch query failed, falling back to individual queries: {e}")
-            for id, valErrand in zip(colList1, colList2):
-                if condition == 'ic.reference':
-                    condition_sql = f"{condition} = '{id}'"
-                elif condition == 'ic.id':
-                    condition_sql = f"{condition} = {id}"
-                try:
-                    result = fetchFromDB(self.errand_link_query.format(CONDITION=condition_sql))
-                    if not result.empty:
-                        errandNumber = result.iloc[0]['errandNumber']
-                        ref = result.iloc[0]['reference']
-                        link = f'<a href="{self.base_url}{errandNumber}" target="_blank" style="background-color: gray; color: white; padding: 2px 5px;" title="matched by {valErrand}">{ref}</a>'
-                        links.append(link)
-                    else:
-                        links.append(f'{id} (No Corresponding Link)')
-                except Exception:
-                    links.append(f'{id} (Query Error)')
-                    
+                idxs_sorted = sorted(indices)
+                matched_rows = errand.loc[idxs_sorted]
+                print("\n================ matched_rows ===================\n", matched_rows)
+                current_refs = set(pay.at[idx, 'isReference'])
+                for ref in matched_rows['isReference']:
+                    if ref not in current_refs:
+                        pay.at[idx, 'isReference'].append(ref)
+                        pay.at[idx, 'val_pay'].append(val_pay)
+                        current_refs.add(ref)
+
+                rows_amount_ok = matched_rows[matched_rows['settlementAmount'] == val_amount]
+                if not rows_amount_ok.empty:
+                    for _, r in rows_amount_ok.iterrows():
+                        icid = int(r['insuranceCaseId'])
+                        if icid not in matched[col_pay]:
+                            matched[col_pay].append(icid)
+                        pay.at[idx, 'val_errand'].append(r[col_errand])
+
+        matchedLists = [matched[c] for c in self.matching_cols_pay if matched[c]]
+        if not matchedLists:
+            return []
+
+        first = matchedLists[0]
+        inter = [x for x in first if all(x in s for s in matchedLists[1:])]
+        if inter:
+            return inter
+
+        union = []
+        seen = set()
+        for s in matchedLists:
+            for x in s:
+                if x not in seen:
+                    seen.add(x)
+                    union.append(x)
+        return union    
+ 
+    def _generate_links(self, ic_ids: List[Any], vals_errand: List[Any], condition: str) -> List[str]:
+        links = []
+        if not ic_ids:
+            return links
+        
+        for id, valErrand in zip(ic_ids, vals_errand):
+            if condition == 'ic.reference':
+                cond = f"{condition} = '{id}'"
+            elif condition == 'ic.id':
+                cond = f"{condition} = {id}"
+            result = fetchFromDB(self.errand_link_query.format(CONDITION=cond))
+            if not result.empty: 
+                errandNumber = result.iloc[0]['errandNumber']
+                ref = result.iloc[0]['reference']
+                link = f'<a href="{self.base_url}{errandNumber}" target="_blank" style="background-color: gray; color: white; padding: 2px 5px;" title="matched by {valErrand}">{ref}</a>'
+                links.append(link)
+            else:
+                links.append(f'{ref} (No Corresponding Link)')
         return links
 
-    def match_by_info(self, pay: pd.DataFrame, errand: pd.DataFrame) -> pd.DataFrame:
-        """Match payments by info/reference data"""
-        mask = (pay['info'].notna() | pay['extractReference'].notna())
-        for idxPay, rowPay in pay[mask].iterrows():
-            matchedInsuranceCaseID = self.find_matches(pay, errand, idxPay, rowPay) 
-            qty = len(matchedInsuranceCaseID)
-            if qty > 0:
-                pay.at[idxPay, 'insuranceCaseId'].extend(matchedInsuranceCaseID) 
-                links = self.generate_links(rowPay['insuranceCaseId'], rowPay['valErrand'], 'ic.id')
-                pay.at[idxPay, 'referenceLink'] = links
-                if qty == 1:
-                    pay.at[idxPay, 'status'] = f"One DR matched perfectly (reference: {', '.join(links)})."
-                elif qty > 1:
-                    pay.at[idxPay, 'status'] = f"Found {qty} matching DRs (references: {', '.join(links)}) and the payment amount matches each one."
-            else:      
-                pay.at[idxPay, 'status'] = "No Found" 
-
-        return pay
-
-    def partly_amount_matching(self, refAmountDict: Dict[str, float], target_amount: float) -> Optional[List[str]]:
+    
+    def _partly_amount_matching(self, ref_amount_dict: Dict[str, float], target_amount: float) -> Optional[List[str]]:
         """Find combinations of references that match the target amount"""
-        references = list(refAmountDict.keys())
-        amounts = list(refAmountDict.values())
+        references = list(ref_amount_dict.keys())
+        amounts = list(ref_amount_dict.values())
         
         for r in range(1, len(amounts) + 1):
             for combo in combinations(zip(references, amounts), r):
@@ -275,62 +238,62 @@ class PaymentService(BaseService):
         return None
 
     def reminder_unmatched_amount(self, pay: pd.DataFrame) -> pd.DataFrame:
-        """Handle unmatched payments by checking all errands"""
         mask = (pay['status'].isin(["No Found",""]))
-        for idx, rowPay in pay[mask].iterrows():
-            matchedInsuranceCaseID, isReference, links = [], [], []
-            refAmountDict = {}
+        for idx, row_pay in pay.loc[mask].iterrows():
+            matched_ic_ids, isReference, links = [], [], []
+            ref_amount_dict = {}
             msg = "No Found"
             
             # Collect all possible references
-            if (len(rowPay['isReference']) > 0):
-                for ref in rowPay['isReference']:
+            if (len(row_pay['isReference']) > 0):
+                for ref in row_pay['isReference']:
                     if ref not in isReference:
                         isReference.append(ref)
-            if pd.notna(rowPay['extractReference']) and (len(rowPay['extractReference']) == 10) and (rowPay['extractReference'] not in isReference):
-                isReference.append(str(rowPay['extractReference']))                 
-            if pd.notna(rowPay['extractOtherNumber']) and (len(rowPay['extractOtherNumber']) == 10) and (rowPay['extractOtherNumber'] not in isReference):
-                isReference.append(str(rowPay['extractOtherNumber']))
-            if pd.notna(rowPay['extractDamageNumber']) and (len(rowPay['extractDamageNumber']) == 10) and (rowPay['extractDamageNumber'] not in isReference):
-                isReference.append(str(rowPay['extractDamageNumber']))
+            if pd.notna(row_pay['extractReference']) and (len(row_pay['extractReference']) == 10) and (row_pay['extractReference'] not in isReference):
+                isReference.append(str(row_pay['extractReference']))                 
+            if pd.notna(row_pay['extractOtherNumber']) and (len(row_pay['extractOtherNumber']) == 10) and (row_pay['extractOtherNumber'] not in isReference):
+                isReference.append(str(row_pay['extractOtherNumber']))
+            if pd.notna(row_pay['extractDamageNumber']) and (len(row_pay['extractDamageNumber']) == 10) and (row_pay['extractDamageNumber'] not in isReference):
+                isReference.append(str(row_pay['extractDamageNumber']))
                 
             if len(isReference) > 0:
                 condition_sql = f"""AND ic.reference IN ({', '.join([f"'{ref}'" for ref in set(isReference)])})"""  
-                subErrand = fetchFromDB(self.errand_pay_query.format(CONDITION=condition_sql))
+                sub_errand = fetchFromDB(self.errand_pay_query.format(CONDITION=condition_sql))
 
-                subErrand.loc[subErrand['settlementAmount'].isna(), 'settlementAmount'] = 0
-                if not subErrand.empty:
-                    for _, rowSub in subErrand.iterrows():
-                        if rowSub['insuranceCaseId'] not in matchedInsuranceCaseID:
-                            settlement_amount = rowSub['settlementAmount'] if pd.notna(rowSub['settlementAmount']) else 0
+                sub_errand.loc[sub_errand['settlementAmount'].isna(), 'settlementAmount'] = 0
+                if not sub_errand.empty:
+                    for _, row_sub in sub_errand.iterrows():
+                        if row_sub['insuranceCaseId'] not in matched_ic_ids:
+                            settlement_amount = row_sub['settlementAmount'] if pd.notna(row_sub['settlementAmount']) else 0
                             pay.at[idx, 'settlementAmount'] += float(settlement_amount)
-                            matchedInsuranceCaseID.append(rowSub['insuranceCaseId'])
+                            matched_ic_ids.append(row_sub['insuranceCaseId'])
                             
-                        if str(rowSub['isReference']) not in [str(ref) for ref in pay.at[idx, 'isReference']]:
-                            pay.at[idx, 'isReference'].append(str(rowSub['isReference']))
-                            pay.at[idx, 'valPay'].append(str(rowSub['isReference']))
+                        if str(row_sub['isReference']) not in [str(ref) for ref in pay.at[idx, 'isReference']]:
+                            pay.at[idx, 'isReference'].append(str(row_sub['isReference']))
+                            pay.at[idx, 'val_pay'].append(str(row_sub['isReference']))
                             
-                        if str(rowSub['isReference']) not in refAmountDict:
-                            settlement_amount = rowSub['settlementAmount'] if pd.notna(rowSub['settlementAmount']) else 0
-                            refAmountDict[str(rowSub['isReference'])] = float(settlement_amount)
+                        if str(row_sub['isReference']) not in ref_amount_dict:
+                            settlement_amount = row_sub['settlementAmount'] if pd.notna(row_sub['settlementAmount']) else 0
+                            ref_amount_dict[str(row_sub['isReference'])] = float(settlement_amount)
 
-            refList = pay.at[idx, 'isReference']
-            valErrandList = pay.at[idx, 'valPay']
-            links = self.generate_links(refList, valErrandList, 'ic.reference')
+            ref_list = pay.at[idx, 'isReference']
+            val_errand_list = pay.at[idx, 'val_pay']
+            links = self._generate_links(ref_list, val_errand_list, 'ic.reference')
             pay.at[idx, 'referenceLink'] = links
             
-            qty = len(matchedInsuranceCaseID)
+            qty = len(matched_ic_ids)
             if qty > 0:
-                totalSettlementAmount = pay.at[idx, 'settlementAmount']
-                rowPaymentAmount = rowPay['amount']
+                total_settlement_amount = pay.at[idx, 'settlementAmount']
+                row_payment_amount = row_pay['amount']
 
-                if rowPaymentAmount == totalSettlementAmount:
+                if row_payment_amount == total_settlement_amount:
                     if qty == 1:
                         msg = f"One DR matched perfectly (reference: {', '.join(links)})."
                     else:       
-                        msg = f"Found {qty} matching DRs (references: {', '.join(links)}), and the total amount matches the payment."
+                        msg = (f"Found {qty} matching DRs (references: {', '.join(links)}), "
+                               f"and the total amount matches the payment.")
                 else:
-                    matched_references = self.partly_amount_matching(refAmountDict, rowPaymentAmount)
+                    matched_references = self._partly_amount_matching(ref_amount_dict, row_payment_amount)
                     if matched_references:
                         matched_links = [link for link in links if any(ref in link for ref in matched_references)]
                         if len(matched_references) == 1:
@@ -347,209 +310,104 @@ class PaymentService(BaseService):
 
         return pay   
 
+    def _msg_for_one(self, one_line_df: pd.DataFrame, source: str, amount: float) -> str:
+        errand_number = one_line_df.iloc[0]['errandNumber']
+        ref = one_line_df.iloc[0]['isReference']
+        settlement_amount = one_line_df.iloc[0]['settlementAmount'] if pd.notna(one_line_df.iloc[0]['settlementAmount']) else 0
+        
+        if source == 'Insurance_Company':
+            entity = one_line_df.iloc[0]['insuranceCompanyName'] 
+        elif source == 'Clinic':
+            entity = one_line_df.iloc[0]['clinicName']
+            
+        link = f'<a href="{self.base_url}{errand_number}" target="_blank" style="background-color: gray; color: white; padding: 2px 5px;" title="matched by Entity: {entity} and Amount: {amount}">{ref}</a>'
+        
+        if amount == float(settlement_amount):
+            msg = f"One DR matched perfectly (reference: {link}) by both entity and amount."
+        else:
+            msg = "No Found"
+            
+        return msg
+
     def match_entity_and_amount(self, pay: pd.DataFrame, errand: pd.DataFrame) -> pd.DataFrame:
-        """Match by entity (bank/clinic) and amount"""
-        def msg_for_one(oneLineDF: pd.DataFrame, source: str, amount: float) -> str:
-            errandNumber = oneLineDF.iloc[0]['errandNumber']
-            ref = oneLineDF.iloc[0]['isReference']
-            settlement_amount = oneLineDF.iloc[0]['settlementAmount'] if pd.notna(oneLineDF.iloc[0]['settlementAmount']) else 0
-            
-            # Debug for payment 63874
-            if amount == 70500:
-                print(f"      msg_for_one: amount={amount}, settlement={settlement_amount}, match={amount == float(settlement_amount)}")
-            
+        payout_entity_source, fb_dict, clinic_dict = self._get_entity_dicts()
+
+        errand = errand.copy()
+        errand["fb_lower"] = errand["insuranceCompanyName"].str.lower()
+
+        errand_date = errand["createdAt"]
+        fb_lower = errand["insuranceCompanyName"].str.lower()
+        clinic_lower = errand["clinicName"].str.lower()
+
+        mask = pay['status'].isin(["No Found", ""])
+
+        for idx, rowPay in pay.loc[mask].iterrows():
+            amount = rowPay['amount']
+            source = payout_entity_source.get(rowPay['bankName'], "Unknown")
+            msg = "No Found"
             if source == 'Insurance_Company':
-                entity = oneLineDF.iloc[0]['insuranceCompanyName'] 
+                fb_list = fb_dict.get(rowPay['bankName'], [])
+                if not fb_list:
+                    pay.at[idx, 'status'] = "No Found"
+                    continue
+
+                fb_lower_list = [x.lower() for x in fb_list if isinstance(x, str)]
+                entity_matched = errand.loc[(errand_date <= rowPay['createdAt']) & (fb_lower.isin(fb_lower_list))]
+
             elif source == 'Clinic':
-                entity = oneLineDF.iloc[0]['clinicName']
-                
-            link = f'<a href="{self.base_url}{errandNumber}" target="_blank" style="background-color: gray; color: white; padding: 2px 5px;" title="matched by Entity: {entity} and Amount: {amount}">{ref}</a>'
-            
-            if amount == float(settlement_amount):
-                msg = f"One DR matched perfectly (reference: {link}) by both entity and amount."
+                clinic_list = clinic_dict.get(rowPay['bankName'], [])
+                if not clinic_list:
+                    pay.at[idx, 'status'] = "No Found"
+                    continue
+                clinic_lower_list = [x.lower() for x in clinic_list if isinstance(x, str)]
+                entity_matched = errand.loc[(errand_date <= rowPay['createdAt']) & (clinic_lower.isin(clinic_lower_list))]
+            else:
+                pay.at[idx, 'status'] = "No Found"
+                continue
+
+            qty = len(entity_matched)
+            if qty == 1:
+                msg = self._msg_for_one(entity_matched, source, amount)
+
+            elif qty > 1:
+                for _, group_df in entity_matched.groupby(['insuranceCompanyName', 'clinicName', 'animalId']):
+                    if len(group_df) == 1:
+                        temp = self._msg_for_one(group_df, source, amount)
+                        msg = temp
+                    else:
+                        ref_amount_dict, links = {}, []
+                        for _, row in group_df.iterrows():
+                            sa = row['settlementAmount']
+                            if pd.notna(sa):
+                                ref_amount_dict[row['isReference']] = sa  # 不把 NaN 当 0
+                            errand_number = row['errandNumber']
+                            ref = row['isReference']
+                            entity = row['insuranceCompanyName'] if source == 'Insurance_Company' else row['clinicName']
+                            link = (f'<a href="{self.base_url}{errand_number}" target="_blank" '
+                                    f'style="background-color: gray; color: white; padding: 2px 5px;" '
+                                    f'title="matched by Entity: {entity} and Amount: {amount}">{ref}</a>')
+                            links.append((ref, link))
+
+                        matched_refs = self._partly_amount_matching(ref_amount_dict, amount)
+                        if matched_refs:
+                            matched_links = [link for ref, link in links if ref in matched_refs]
+                            if len(matched_refs) == 1:
+                                msg = (f"One DR matched perfectly (reference: {', '.join(matched_links)}) "
+                                       f"by both entity and amount.")
+                            else:
+                                msg = (f"Found {len(matched_refs)} matching DRs "
+                                       f"(references: {', '.join(matched_links)}) by entity, "
+                                       f"and the total amount matches the payment.")
+                        else:
+                            msg = "No Found"
+                    
             else:
                 msg = "No Found"
-                
-            return msg
-                
-        # Use cached entity dictionaries
-        payoutEntitySource, icDict, clinicDict = self._get_entity_dicts()
-        
-        mask = (pay['status'].isin(["No Found",""]))
-        for idx, rowPay in pay[mask].iterrows():
-            icList, clinicList = [], []
-            amount = rowPay['amount']
-            msg = "No Found"  # Default message
-            
-            # Debug logging for payment 63874
-            if rowPay['id'] == 63874:
-                print(f"\n🔍 DEBUG Payment {rowPay['id']}:")
-                print(f"   Bank: {rowPay['bankName']}")
-                print(f"   Amount: {amount}")
-                print(f"   Status: {rowPay['status']}")
-            
-            source = payoutEntitySource.get(rowPay['bankName'], "Unknown")
-            
-            if rowPay['id'] == 63874:
-                print(f"   Source lookup result: {source}")
-                print(f"   Available payout entities: {list(payoutEntitySource.keys())[:10]}...")
-                print(f"   Bank dict mapping: {self.bank_dict.get(rowPay['bankName'], 'NOT_FOUND')}")
-                print(f"   Available bank dict keys: {list(self.bank_dict.keys())[:5]}...")
-            if source == 'Insurance_Company':
-                icList = icDict.get(rowPay['bankName'], [])
-                if rowPay['id'] == 63874:
-                    print(f"   Insurance Company List: {icList}")
-            elif source == 'Clinic':
-                clinicList = clinicDict.get(rowPay['bankName'], [])
-                if rowPay['id'] == 63874:
-                    print(f"   Clinic List: {clinicList}")
-            else:
-                if rowPay['id'] == 63874:
-                    print(f"   ERROR: Unknown source '{source}', trying bank_dict fallback...")
-                
-                # Fallback: Use bank_dict mapping for insurance companies
-                bank_ref = self.bank_dict.get(rowPay['bankName'])
-                if bank_ref:
-                    # Map common insurance company references to lowercase names for matching
-                    ic_name_mapping = {
-                        'folksam': 'folksam',
-                        'agria': 'agria', 
-                        'sveland': 'sveland',
-                        'if': 'if',
-                        'trygghansa': 'trygg-hansa',
-                        'dina': 'dina'
-                    }
-                    expected_ic_name = ic_name_mapping.get(bank_ref.lower())
-                    if expected_ic_name:
-                        source = 'Insurance_Company'
-                        icList = [expected_ic_name]
-                        if rowPay['id'] == 63874:
-                            print(f"   Fallback successful: {bank_ref} → {expected_ic_name} (lowercase)")
-                    else:
-                        if rowPay['id'] == 63874:
-                            print(f"   No mapping found for bank_ref: {bank_ref}")
-                        continue
-                else:
-                    if rowPay['id'] == 63874:
-                        print(f"   No bank_dict mapping found, skipping...")
-                    continue
-            
-            # Use case-insensitive matching for insurance company names
-            if source == 'Insurance_Company':
-                entityMatched = errand.loc[
-                    (errand['createdAt'] <= rowPay['createdAt']) & 
-                    (errand['insuranceCompanyName'].str.lower().isin([name.lower() for name in icList]))
-                ]
-            else:  # Clinic
-                entityMatched = errand.loc[
-                    (errand['createdAt'] <= rowPay['createdAt']) & 
-                    (errand['clinicName'].isin(clinicList))
-                ]
-            qty = entityMatched.shape[0]
-            
-            if rowPay['id'] == 63874:
-                print(f"   Entity matched errands: {qty}")
-                if qty > 0:
-                    # Debug: Show available columns
-                    print(f"   Available columns: {entityMatched.columns.tolist()}")
-                    
-                    # Check if errand 74806 is in the matched results using correct column name
-                    errand_id_col = 'errandId' if 'errandId' in entityMatched.columns else 'insuranceCaseId'
-                    errand_ids = entityMatched[errand_id_col].tolist()
-                    print(f"   Matched errand IDs: {errand_ids}")
-                    print(f"   Settlement amounts: {entityMatched['settlementAmount'].tolist()}")
-                    
-                    if 74806 in errand_ids:
-                        print(f"   ✅ FOUND: Errand 74806 IS in matched results!")
-                        idx_74806 = errand_ids.index(74806)
-                        print(f"   Errand 74806 amount: {entityMatched['settlementAmount'].tolist()[idx_74806]}")
-                    else:
-                        print(f"   ❌ Errand 74806 NOT in matched results")
-                        
-                        # Check if 74806 exists at all in the full errand dataset
-                        full_errand_id_col = 'errandId' if 'errandId' in errand.columns else 'insuranceCaseId'
-                        all_case_ids = errand[full_errand_id_col].tolist()
-                        if 74806 in all_case_ids:
-                            print(f"   ℹ️ But errand 74806 EXISTS in full dataset")
-                            errand_74806 = errand[errand[full_errand_id_col] == 74806]
-                            if not errand_74806.empty:
-                                row_74806 = errand_74806.iloc[0]
-                                print(f"   Errand 74806 details:")
-                                print(f"     Insurance Company: {row_74806['insuranceCompanyName']}")
-                                print(f"     Settlement Amount: {row_74806['settlementAmount']}")
-                                print(f"     Created At: {row_74806['createdAt']}")
-                                print(f"     Payment Created At: {rowPay['createdAt']}")
-                                print(f"     Date check: {row_74806['createdAt']} <= {rowPay['createdAt']} = {row_74806['createdAt'] <= rowPay['createdAt']}")
-                                print(f"     Company check: '{row_74806['insuranceCompanyName'].lower()}' in {[name.lower() for name in icList]} = {row_74806['insuranceCompanyName'].lower() in [name.lower() for name in icList]}")
-                        else:
-                            print(f"   ❌ Errand 74806 does NOT exist in full dataset")
-                else:
-                    # Check what's available for debugging
-                    print(f"   Total errands in date range: {len(errand[errand['createdAt'] <= rowPay['createdAt']])}")
-                    if source == 'Insurance_Company':
-                        insurance_matches = errand[errand['insuranceCompanyName'].isin(icList)]
-                        print(f"   Errands with matching insurance companies: {len(insurance_matches)}")
-                        print(f"   Sample insurance company names in errand data: {errand['insuranceCompanyName'].unique()[:10].tolist()}")
-            if qty == 1:
-                msg = msg_for_one(entityMatched, source, amount)
-                    
-            elif qty > 1:
-                if rowPay['id'] == 63874:
-                    print(f"   Processing {qty} matched errands in groups...")
-                    # Find which group contains errand 74806
-                    sameClinicAnimalGroup_debug = entityMatched.groupby(['insuranceCompanyName','clinicName','animalId'])
-                    errand_id_col = 'errandId' if 'errandId' in entityMatched.columns else 'insuranceCaseId'
-                    for group_name, group_df_debug in sameClinicAnimalGroup_debug:
-                        if 74806 in group_df_debug[errand_id_col].tolist():
-                            print(f"   🎯 FOUND 74806 in group: {group_name}")
-                            print(f"   Group contains errands: {group_df_debug[errand_id_col].tolist()}")
-                            print(f"   Group amounts: {group_df_debug['settlementAmount'].tolist()}")
-                            break
-                    print(f"   Total number of groups: {len(list(sameClinicAnimalGroup_debug))}")
-                    
-                sameClinicAnimalGroup = entityMatched.groupby(['insuranceCompanyName','clinicName','animalId']) 
-                group_count = 0
-                for _, group_df in sameClinicAnimalGroup:
-                    group_count += 1
-                    if rowPay['id'] == 63874:
-                        print(f"   Group {group_count}: {len(group_df)} errands, amounts: {group_df['settlementAmount'].tolist()}")
-                    if group_df.shape[0] == 1:
-                        temp_msg = msg_for_one(group_df, source, amount)
-                        if temp_msg != "No Found":
-                            msg = temp_msg
-                            break  # Found a successful match, no need to continue
-                        # Continue to next group if this one didn't match
-                    else:
-                        refAmountDict, links = {}, []
-                        for _, row in group_df.iterrows():
-                            settlement_amount = row['settlementAmount'] if pd.notna(row['settlementAmount']) else 0
-                            refAmountDict[row['isReference']] = float(settlement_amount)
-                            errandNumber = row['errandNumber']
-                            ref = row['isReference']
-                            if source == 'Insurance_Company':
-                                entity = row['insuranceCompanyName'] 
-                            elif source == 'Clinic':
-                                entity = row['clinicName']
-                            else:
-                                continue
-                            
-                            link = f'<a href="{self.base_url}{errandNumber}" target="_blank" style="background-color: gray; color: white; padding: 2px 5px;" title="matched by Entity: {entity} and Amount: {amount}">{ref}</a>'
-                            links.append((ref, link))
-                        
-                        matched_references = self.partly_amount_matching(refAmountDict, amount)
-                        if matched_references:
-                            matched_links = [link for ref, link in links if ref in matched_references]
-                            if len(matched_references) == 1:
-                                msg = f"One DR matched perfectly (reference: {', '.join(matched_links)}) by both entity and amount."
-                            else:
-                                msg = f"Found {len(matched_references)} matching DRs (references: {', '.join(matched_links)}) by entity, and the total amount matches the payment."
-                            break  # Found a successful match, no need to continue
-                        # Continue to next group if this one didn't match
-            
+
             pay.at[idx, 'status'] = msg
 
         return pay
-
+ 
     def match_payout(self, pay: pd.DataFrame, payout: pd.DataFrame) -> pd.DataFrame:
         """Match against payout records - optimized with vectorized operations"""
         if payout.empty:
@@ -557,50 +415,54 @@ class PaymentService(BaseService):
             pay.loc[mask, 'status'] = 'No matching DRs found.'
             return pay
             
-        # Prepare payout data
-        payout_clean = payout.copy()
-        payout_clean['reference'] = payout_clean['reference'].astype(str)
+        mask = pay['status'].isin(["No Found", ""])
+        ref_series = payout['reference']
+        amt_series = payout['amount']
         
-        mask = (pay['status'].isin(["No Found",""]))
-        for idx, rowPay in pay[mask].iterrows():
-            matchedTransId, matchedClinicName, matchedType = set(), set(), set()
-            
-            # Get all payment values to match
-            pay_values = []
-            for col in self.matching_cols_pay:
-                valPay = rowPay[col]
-                if pd.notna(valPay):
-                    pay_values.append(str(valPay))
-            
-            if pay_values:
-                # Vectorized matching - find all matches at once
-                ref_mask = payout_clean['reference'].isin(pay_values)
-                amount_mask = (payout_clean['amount'] == rowPay['amount'])
-                combined_mask = ref_mask & amount_mask
-                
-                if combined_mask.any():
-                    matched_payouts = payout_clean[combined_mask]
-                    
-                    # Extract unique values efficiently
-                    trans_ids = matched_payouts['transactionId'].dropna().astype(int).unique()
-                    clinic_names = matched_payouts['clinicName'].dropna().unique() 
-                    types = matched_payouts['type'].dropna().unique()
-                    
-                    matchedTransId.update(trans_ids)
-                    matchedClinicName.update(clinic_names)
-                    matchedType.update(types)
+        for idx, row_pay in pay.loc[mask].iterrows():
+            matched_trans_ids, matched_clinic_name, matched_type = [], [], []
+            amount_eq = (amt_series == row_pay['amount'])
 
-            qty = len(matchedTransId)
+            for col in self.matching_cols_pay:
+                val_pay = row_pay[col]
+                if pd.isna(val_pay):
+                    continue
+                hits = payout[(ref_series == val_pay) & amount_eq]
+
+                for _, hit in hits.iterrows():
+                    tid = hit['transactionId']
+                    if pd.notna(tid):
+                        tid = int(tid)
+                        if tid not in matched_trans_ids:
+                            matched_trans_ids.append(tid)
+
+                    cname = hit['clinicName']
+                    if pd.notna(cname) and cname not in matched_clinic_name:
+                        matched_clinic_name.append(cname)
+
+                    typ = hit['type']
+                    if pd.notna(typ) and typ not in matched_type:  
+                        matched_type.append(typ)
+
+            qty = len(matched_trans_ids)
             if qty == 1:
-                pay.at[idx, 'status'] = f"Payment has been paid out<br>             TransactionId: {list(matchedTransId)[0]}<br>             Amount: {rowPay['amount'] / 100:.2f} kr<br>             Clinic Name: {list(matchedClinicName)[0]}<br>             Type: {list(matchedType)[0]}" 
+                pay.at[idx, 'status'] = (f"Payment has been paid out<br>"
+                                         f"             TransactionId: {list(matched_trans_ids)[0]}<br>"
+                                         f"             Amount: {row_pay['amount'] / 100:.2f} kr<br>"
+                                         f"             Clinic Name: {list(matched_clinic_name)[0]}<br>"
+                                         f"             Type: {list(matched_type)[0] if matched_type else ''}")
             elif qty > 0:
-                pay.at[idx, 'status'] = f"Payment has been paid out {qty} times<br>    TransactionId:{' '.join(map(str, sorted(matchedTransId)))}<br>             Amount: {rowPay['amount'] / 100:.2f} kr<br>    Clinic Name: {' '.join(sorted(matchedClinicName))}<br>    Type: {' '.join(sorted(matchedType))}"
+                pay.at[idx, 'status'] = (f"Payment has been paid out {qty} times<br>"
+                                         f"    TransactionId:{' '.join(map(str, sorted(matched_trans_ids)))}<br>"
+                                         f"           Amount: {row_pay['amount'] / 100:.2f} kr<br>"
+                                         f"      Clinic Name: {' '.join(sorted(matched_clinic_name))}<br>"
+                                         f"             Type: {' '.join(sorted(matched_type))}")
             else:
                 pay.at[idx, 'status'] = 'No matching DRs found.'   
 
         return pay
 
-    def calculate_statistics(self, pay: pd.DataFrame) -> Dict[str, Any]:
+    def statistics(self, pay: pd.DataFrame) -> Dict[str, Any]:
         """Calculate matching statistics"""
         all_count = pay.id.count()
         matched = pay[(~pay['status'].str.contains('No Found', na=False)) & (~pay['status'].str.contains('No matching DRs found', na=False))]

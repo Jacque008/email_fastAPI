@@ -1,7 +1,7 @@
 from typing import Dict, Any, Optional, Tuple
 import pandas as pd
-from .utils import fetchFromDB, check_eq, pick_first, check_full_parts_match, list_deduplicate, as_id_list
-from pandas.api.types import is_datetime64tz_dtype
+from .utils import fetchFromDB, check_eq, pick_first, check_full_parts_match, list_deduplicate, as_id_list, tz_convert
+from pandas.api.types import is_datetime64tz_dtype # type: ignore
 from .processor import Processor
 
 class Connector(Processor):
@@ -91,7 +91,8 @@ class Connector(Processor):
         if errand_df.empty:
             return None
 
-        errand_df['date'] = pd.to_datetime(errand_df['date'], utc=True).dt.tz_convert('Europe/Stockholm')
+        # errand_df['date'] = pd.to_datetime(errand_df['date'], utc=True).dt.tz_convert('Europe/Stockholm')
+        errand_df = tz_convert(errand_df, 'date')
         
         obj_cols = errand_df.select_dtypes(include=['object', 'string']).columns
         errand_df[obj_cols] = errand_df[obj_cols].apply(

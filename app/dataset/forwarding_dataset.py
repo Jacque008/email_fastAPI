@@ -48,12 +48,9 @@ class ForwardingEmailDataset(BaseService):
                 if existing_columns:
                     email = email.drop(columns=existing_columns)
                     
-                print("\n\n",self.forward_query.format(ID=id))
                 adds_on = fetchFromDB(self.forward_query.format(ID=id))          
                 if not adds_on.empty:
                     self.df = email.merge(adds_on, on='id', how='left')
-                    print("==== dataset ===== df.columns: ", self.df.columns)
-                    print("==== dataset ===== df: \n", self.df[['sender','receiver', 'errandId']])
                     
         except Exception as e:
             print(f"Failed to enrich with email data: {str(e)}")
@@ -136,7 +133,6 @@ class ForwardingEmailDataset(BaseService):
             #   .validate_data()
             
             result = ForwardingOut(id=request.id)
-            print("result 1: \n", result)
             if ds.df.empty:
                 # result.error_message = "Failed to retrieve email data"
                 return result
@@ -146,7 +142,6 @@ class ForwardingEmailDataset(BaseService):
             result = ds.generate_forward_address(result, row_data)
             result = ds.generate_forward_subject(result, row_data)
             result = ds.generate_forward_content(result, row_data)
-            print("result 2: \n", result)
             return result
             
         except Exception as e:

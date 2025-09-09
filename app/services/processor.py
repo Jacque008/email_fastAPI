@@ -3,7 +3,7 @@ import regex as reg
 import pandas as pd
 from inscriptis import get_text
 from .base_service import BaseService
-from .utils import lower_and_split, truncate_text
+from .utils import tz_convert, truncate_text
 from pandas.api.types import is_integer_dtype
 
 
@@ -12,7 +12,8 @@ class Processor(BaseService):
         if is_integer_dtype(df['createdAt']):
             df['date'] = pd.to_datetime(df['createdAt'], unit='ms', utc=True).dt.tz_convert('Europe/Stockholm')
         else:
-            df['date'] = pd.to_datetime(df['createdAt'], errors='coerce', utc=True).dt.tz_convert('Europe/Stockholm')
+            # df['date'] = pd.to_datetime(df['createdAt'], errors='coerce', utc=True).dt.tz_convert('Europe/Stockholm')
+            df = tz_convert(df, 'date')
         df = df.drop(columns=['createdAt'])
 
         return df

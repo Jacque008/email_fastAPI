@@ -1,8 +1,9 @@
 import os
+import math
 import base64
 import gspread
 import pandas as pd
-from typing import Optional, List, Any
+from typing import Optional, List, TypeVar, Type, Mapping, Any
 import regex as reg
 from functools import lru_cache
 from sqlalchemy import create_engine, text
@@ -166,7 +167,8 @@ def base_match(text: str, patterns: List[str]) -> Optional[str]:
             return matched.group(1)
     return None   
 
-def model_to_dataframe(inputs: List[BaseModel]) -> pd.DataFrame:
+T = TypeVar("T", bound=BaseModel)
+def model_to_dataframe(inputs: List[T]) -> pd.DataFrame:
     """Convert list of PaymentIn objects to pandas DataFrame"""
     dicts = []
     for input in inputs:
@@ -175,6 +177,42 @@ def model_to_dataframe(inputs: List[BaseModel]) -> pd.DataFrame:
     
     return pd.DataFrame(dicts)
     
+def dataframe_to_model(df: pd.DataFrame, model_cls: Type[T], rename: Optional[Mapping[str, str]] = None,       
+    defaults: Optional[Mapping[str, Any]] = None, drop_unknown: bool = True, nan_as_none: bool = True,                         
+) -> List[T]:
+    fields = (
+        set(getattr(model_cls, "model_fields").keys())
+        if hasattr(model_cls, "model_fields")
+        else set(getattr(model_cls, "__fields__").keys())
+    )
+
+    if rename:
+        df = df.rename(columns=rename)
+
+    records = df.to_dict(orient="records")
+    out: List[T] = []
+
+    for i, rec in enumerate(records):
+        if nan_as_none:
+            rec = {k: (None if (isinstance(v, float) and math.isnan(v)) else v) for k, v in rec.items()}
+
+        if drop_unknown:
+            rec = {k: v for k, v in rec.items() if k in fields}
+
+        if defaults:
+            for k, v in defaults.items():
+                if rec.get(k) is None:
+                    rec[k] = v
+
+        try:
+            obj = model_cls(**rec) # type: ignore[arg-type]
+        except Exception as e:
+            raise ValueError(f"Row {i} cannot be parsed into {model_cls.__name__}: {e}\nData: {rec}") from e
+
+        out.append(obj)
+
+    return out
+
 def check_eq(a, b):
     grp = {'Trygg-Hansa', 'Moderna Försäkringar'}
     if pd.isna(a) or pd.isna(b):
@@ -241,6 +279,12 @@ def truncate_text(text, trunc_reg_list):
     else:
         return text
     
+def tz_convert(df: pd.DataFrame, time_col: str) -> pd.DataFrame:
+    if not df.empty:
+        df[time_col] = pd.to_datetime(df[time_col], errors='coerce', utc=True).dt.tz_convert('Europe/Stockholm')
+        return df
+    return pd.DataFrame() 
+
 # def upload_to_gcs(local_path: str, bucket_name: str, dest_path: str):
 #     client = storage.Client()
 #     bucket = client.bucket(bucket_name)
