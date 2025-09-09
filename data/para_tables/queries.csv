@@ -113,8 +113,7 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                                       FROM insurance_settlement inst
                                       WHERE inst.""insuranceCaseId"" = ist.""insuranceCaseId"")
                                 ) AS ls ON ls.""insuranceCaseId"" = ic.id
-                    WHERE es.complete IS FALSE
-                          AND es.cancelled = False
+                    WHERE es.cancelled = False 
                           {CONDITION}
                     ORDER BY er.""createdAt"" DESC;","  SELECT DISTINCT
                           ic.id,

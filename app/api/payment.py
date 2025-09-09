@@ -77,7 +77,7 @@ async def process_payment_matching(
         results = ds.match_payments(payment_objects)
         
         # Get statistics
-        statistics = ds.get_matching_statistics(payment_objects)
+        statistics = ds.matching_statistics(payment_objects)
         
         return templates.TemplateResponse("payment.html", {
             "request": request,
@@ -117,7 +117,13 @@ async def payment_matching_api(
             payment_request = PaymentIn(**payment_data)
             ds = PaymentDataset()
             result = ds.match_payments([payment_request])
-            return result[0] if result else PaymentOut(id=payment_request.id, status="No Found")
+            return result[0] if result else PaymentOut(
+                id=payment_request.id,
+                amount=f"{payment_request.amount / 100:.2f} kr",
+                bankName=payment_request.bankName,
+                createdAt=payment_request.createdAt,
+                status="Not Found"
+            )
         
         # Handle batch requests
         elif isinstance(payment_data, list):

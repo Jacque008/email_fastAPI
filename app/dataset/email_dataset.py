@@ -124,28 +124,13 @@ class EmailDataset:
     def do_connect(self) -> pd.DataFrame:
         """Categorize emails and connect them with errands."""
         try:
-            print(f"Starting do_connect with {len(self.df)} rows")
-            
             self.df = self.do_preprocess()
-            print(f"After preprocess: {len(self.df)} rows")
-            
             self.df = self.classifier.initialize_columns(self.df)
-            print(f"After initialize_columns: {len(self.df)} rows")
-            
             self.df = self.extractor.extract_numbers_from_attach(self.df)
-            print(f"After extract_numbers_from_attach: {len(self.df)} rows")
-            
             self.df = self.extractor.extract_numbers_from_email(self.df)
-            print(f"After extract_numbers_from_email: {len(self.df)} rows")
-            
             self.df = self.classifier.categorize_emails(self.df)
-            print(f"After categorize_emails: {len(self.df)} rows")
-            
             self.df = self.connector.connect_with_time_windows(self.df)
-            print(f"After connect_with_time_windows: {len(self.df)} rows")
-            
             self.df = self.classifier.refine_finalize(self.df)
-            print(f"After refine_finalize: {len(self.df)} rows")
             
             return self.df
             

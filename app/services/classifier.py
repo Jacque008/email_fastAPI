@@ -1,7 +1,7 @@
 import regex as reg
 import pandas as pd
 from .base_service import BaseService
-from .utils import fetchFromDB
+from .utils import fetchFromDB, tz_convert
 from typing import Optional
 
 class Classifier(BaseService):    
@@ -57,8 +57,8 @@ class Classifier(BaseService):
         for col in name_cols | id_string_cols:
             df[col] = df[col].astype('string')
 
-        df['errandDate'] = pd.to_datetime(df['errandDate'], errors='coerce', utc=True).dt.tz_convert('Europe/Stockholm')
-
+        df = tz_convert(df, 'errandDate')
+        
         return df
     
     def process_fbReference(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -72,7 +72,8 @@ class Classifier(BaseService):
                         AND ecr."timestamp" < '{infoDate}'::timestamptz
                         AND e.subject = '{safe_subject}'""" )
         isFirst = fetchFromDB(self.info_query.format(CONDITION=condition))
-        isFirst['timestamp'] = pd.to_datetime(isFirst['timestamp'], utc=True).dt.tz_convert('Europe/Stockholm')
+        # isFirst['timestamp'] = pd.to_datetime(isFirst['timestamp'], utc=True).dt.tz_convert('Europe/Stockholm')
+        isFirst = tz_convert(isFirst, 'timestamp')
     
         if isFirst.empty:
             return 'FirstInfo'

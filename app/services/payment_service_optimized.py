@@ -3,7 +3,7 @@ import pandas as pd
 import time
 from typing import Dict, Any
 from .base_service import BaseService
-from .utils import get_payoutEntity, fetchFromDB
+from .utils import get_payoutEntity, fetchFromDB, tz_convert
 
 
 class PaymentServiceOptimized(BaseService):
@@ -72,9 +72,10 @@ class PaymentServiceOptimized(BaseService):
             
             if not self._errand_data.empty:
                 process_start = time.time()
-                self._errand_data['createdAt'] = pd.to_datetime(
-                    self._errand_data['createdAt'], utc=True
-                ).dt.tz_convert('Europe/Stockholm')
+                # self._errand_data['createdAt'] = pd.to_datetime(
+                #     self._errand_data['createdAt'], utc=True
+                # ).dt.tz_convert('Europe/Stockholm')
+                self._errand_data = tz_convert(self._errand_data, 'createdAt')
                 self._errand_data['settlementAmount'] = self._errand_data['settlementAmount'].fillna(0).astype(float)
                 process_time = time.time() - process_start
                 
@@ -109,8 +110,8 @@ class PaymentServiceOptimized(BaseService):
     def process_payment_vectorized(self, pay: pd.DataFrame) -> pd.DataFrame:
         """Fully vectorized payment processing"""
         # Convert timestamps
-        pay['createdAt'] = pd.to_datetime(pay['createdAt'], utc=True).dt.tz_convert('Europe/Stockholm')
-        
+        # pay['createdAt'] = pd.to_datetime(pay['createdAt'], utc=True).dt.tz_convert('Europe/Stockholm')
+        pay = tz_convert(pay, 'createdAt')
         # Vectorized reference extraction
         ref_mask = pay['reference'].notna()
         pay.loc[ref_mask, 'extractReference'] = pay.loc[ref_mask, 'reference'].str.extract(r'(\d+)', expand=False)
@@ -136,7 +137,7 @@ class PaymentServiceOptimized(BaseService):
     def parse_info_vectorized(self, pay: pd.DataFrame) -> pd.DataFrame:
         """Info parsing - revert to original Flask logic for exact compatibility"""
         mask = pay['info'].notna()
-        for idxPay, rowPay in pay[mask].iterrows():
+        for idxPay, rowPay in pay.loc[mask].iterrows():
             ic = self.bankDict.get(rowPay['bankName'], 'None') 
             mask_info = self.infoReg['item'].str.startswith(ic)
             for _, rowInfoReg in self.infoReg[mask_info].iterrows():
