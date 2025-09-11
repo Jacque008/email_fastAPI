@@ -57,10 +57,23 @@ class PaymentService(BaseService):
             self._entity_dicts_cached = True
         return self._payout_entity_source, self._ic_dict, self._clinic_dict
 
-    def load_preprocess_database(self) -> Tuple[pd.DataFrame, Dict[str, Dict[str, List[int]]], pd.DataFrame]:
-        errand = fetchFromDB(self.errand_pay_query.format(CONDITION="AND es.complete IS FALSE"))
+    def load_preprocess_database(self, ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        errand = fetchFromDB(self.errand_pay_query.format(CONDITION=""))
         errand = tz_convert(errand, 'createdAt')
         errand['settlementAmount'] = errand['settlementAmount'].fillna(0).astype(float)
+   
+        payout = fetchFromDB(self.payout_query)
+        if not payout.empty:
+            payout['reference'] = payout['reference'].astype(str)
+        
+        return errand, payout
+    
+    def _build_errand_lookup(self, errand, row_pay) -> Dict[str, Dict[str, List[int]]]:
+        date_mask = (errand['createdAt'] <= row_pay['createdAt'])
+        if not date_mask.any():
+            return {}
+        
+        errand = errand.loc[date_mask].copy()
         errand_lookup = {}
         for col in self.matching_cols_errand:
             if col in errand.columns:
@@ -71,13 +84,8 @@ class PaymentService(BaseService):
                     groups = filtered_s.groupby(filtered_s).indices  
                     errand_lookup[col] = {val: filtered_s.index.take(pos_arr).tolist()
                         for val, pos_arr in groups.items()}
+        return errand_lookup
                     
-        payout = fetchFromDB(self.payout_query)
-        if not payout.empty:
-            payout['reference'] = payout['reference'].astype(str)
-        
-        return errand, errand_lookup, payout
-    
     def init_payment(self, pay: pd.DataFrame) -> pd.DataFrame:
         """Process payment data - extract references and initialize columns"""
         # pay['createdAt'] = pd.to_datetime(pay['createdAt'], utc=True).dt.tz_convert('Europe/Stockholm') 
@@ -94,7 +102,7 @@ class PaymentService(BaseService):
             if colName not in pay.columns:
                 pay[colName] = None
         
-        init_columns = ['val_pay', 'val_errand', 'isReference', 'relevantReference', 'insuranceCaseId', 'referenceLink']
+        init_columns = ['val_pay', 'val_errand', 'isReference', 'insuranceCaseId', 'referenceLink']
         for col in init_columns:
             pay[col] = [[] for _ in range(len(pay))]
         
@@ -126,14 +134,14 @@ class PaymentService(BaseService):
         pay.loc[pay['extractDamageNumber'] == pay['extractOtherNumber'], 'extractDamageNumber'] = None
         pay.loc[pay['extractReference'] == pay['extractOtherNumber'], 'extractOtherNumber'] = None
         pay.loc[pay['extractReference'] == pay['extractDamageNumber'], 'extractDamageNumber'] = None
-        print("\n========= after parse_info ============\n", pay.iloc[0])
+
         return pay
 
-    def match_by_info(self, pay: pd.DataFrame, errand: pd.DataFrame, errand_lookup: Dict[str, Dict[str, List[int]]]) -> pd.DataFrame:
+    def match_by_info(self, pay: pd.DataFrame, errand: pd.DataFrame) -> pd.DataFrame:
         mask = (pay['info'].notna() | pay['extractReference'].notna())
         
         for idx, row_pay in pay.loc[mask].iterrows():
-            matched_ic_ids = self._find_matches(pay, errand, errand_lookup, idx, row_pay)
+            matched_ic_ids = self._find_matches(pay, errand, idx, row_pay)
             qty = len(matched_ic_ids)
             if qty > 0:
                 pay.at[idx, 'insuranceCaseId'].extend(matched_ic_ids) 
@@ -149,14 +157,14 @@ class PaymentService(BaseService):
         
         return pay
     
-    def _find_matches(self, pay: pd.DataFrame, errand: pd.DataFrame, errand_lookup: Dict[str, Dict[str, List[int]]], idx, row_pay: pd.Series) -> List[int]:
+    def _find_matches(self, pay: pd.DataFrame, errand: pd.DataFrame, idx, row_pay: pd.Series) -> List[int]:
         matched = {col_pay: [] for col_pay in self.matching_cols_pay}
         date_mask = (errand['createdAt'] <= row_pay['createdAt'])
         if not date_mask.any():
             return []
 
         val_amount = row_pay['amount']
-
+        errand_lookup = self._build_errand_lookup(errand, row_pay)
         for col_pay in self.matching_cols_pay:
             val_pay = row_pay[col_pay]
             if pd.isna(val_pay):
@@ -169,7 +177,7 @@ class PaymentService(BaseService):
                 
                 idxs_sorted = sorted(indices)
                 matched_rows = errand.loc[idxs_sorted]
-                print("\n================ matched_rows ===================\n", matched_rows)
+
                 current_refs = set(pay.at[idx, 'isReference'])
                 for ref in matched_rows['isReference']:
                     if ref not in current_refs:
@@ -201,8 +209,32 @@ class PaymentService(BaseService):
                 if x not in seen:
                     seen.add(x)
                     union.append(x)
-        return union    
- 
+        return union
+    
+    def _compute_match(self, matched: Dict[str, List[Any]]) -> List[Any]:
+        matched_lists: List[List[Any]] = []
+        for c in self.matching_cols_pay:
+            lst = matched.get(c)
+            if isinstance(lst, list) and len(lst) > 0:
+                matched_lists.append(lst)
+
+        if not matched_lists:
+            return []
+
+        first = matched_lists[0]
+        inter = [x for x in first if all(x in s for s in matched_lists[1:])]
+        if inter:
+            return inter
+
+        seen = set()
+        union: List[Any] = []
+        for s in matched_lists:
+            for x in s:
+                if x not in seen:
+                    seen.add(x)
+                    union.append(x)
+        return union
+
     def _generate_links(self, ic_ids: List[Any], vals_errand: List[Any], condition: str) -> List[str]:
         links = []
         if not ic_ids:
@@ -223,20 +255,6 @@ class PaymentService(BaseService):
                 links.append(f'{ref} (No Corresponding Link)')
         return links
 
-    
-    def _partly_amount_matching(self, ref_amount_dict: Dict[str, float], target_amount: float) -> Optional[List[str]]:
-        """Find combinations of references that match the target amount"""
-        references = list(ref_amount_dict.keys())
-        amounts = list(ref_amount_dict.values())
-        
-        for r in range(1, len(amounts) + 1):
-            for combo in combinations(zip(references, amounts), r):
-                combo_references, combo_amounts = zip(*combo)
-                if sum(combo_amounts) == target_amount:
-                    return list(combo_references)
-                
-        return None
-
     def reminder_unmatched_amount(self, pay: pd.DataFrame) -> pd.DataFrame:
         mask = (pay['status'].isin(["No Found",""]))
         for idx, row_pay in pay.loc[mask].iterrows():
@@ -249,6 +267,7 @@ class PaymentService(BaseService):
                 for ref in row_pay['isReference']:
                     if ref not in isReference:
                         isReference.append(ref)
+            
             if pd.notna(row_pay['extractReference']) and (len(row_pay['extractReference']) == 10) and (row_pay['extractReference'] not in isReference):
                 isReference.append(str(row_pay['extractReference']))                 
             if pd.notna(row_pay['extractOtherNumber']) and (len(row_pay['extractOtherNumber']) == 10) and (row_pay['extractOtherNumber'] not in isReference):
@@ -310,6 +329,19 @@ class PaymentService(BaseService):
 
         return pay   
 
+    def _partly_amount_matching(self, ref_amount_dict: Dict[str, float], target_amount: float) -> Optional[List[str]]:
+        """Find combinations of references that match the target amount"""
+        references = list(ref_amount_dict.keys())
+        amounts = list(ref_amount_dict.values())
+        
+        for r in range(1, len(amounts) + 1):
+            for combo in combinations(zip(references, amounts), r):
+                combo_references, combo_amounts = zip(*combo)
+                if sum(combo_amounts) == target_amount:
+                    return list(combo_references)
+                
+        return None
+ 
     def _msg_for_one(self, one_line_df: pd.DataFrame, source: str, amount: float) -> str:
         errand_number = one_line_df.iloc[0]['errandNumber']
         ref = one_line_df.iloc[0]['isReference']
@@ -467,14 +499,10 @@ class PaymentService(BaseService):
         all_count = pay.id.count()
         matched = pay[(~pay['status'].str.contains('No Found', na=False)) & (~pay['status'].str.contains('No matching DRs found', na=False))]
         perfect = pay[pay['status'].str.contains('One DR matched perfectly', na=False)]
+        relevant = pay[pay['status'].str.contains('relevant', na=False)]
         payout = pay[pay['status'].str.contains('paid out', na=False)]
         noFound = pay[pay['status'].str.contains('No Found', na=False)]
         noMatch = pay[pay['status'].str.contains('No matching DRs found', na=False)]
-        
-        # Print all perfect matched payment IDs
-        perfect_ids = perfect['id'].tolist()
-        print(f"\n🎯 PERFECT MATCHED PAYMENT IDs ({len(perfect_ids)} total):")
-        print(f"   {sorted(perfect_ids)}")
         
         return {
             'total': all_count,
@@ -482,6 +510,8 @@ class PaymentService(BaseService):
             'matched_rate': matched.id.count() / all_count * 100 if all_count > 0 else 0,
             'perfect_matched': perfect.id.count(),
             'perfect_rate': perfect.id.count() / all_count * 100 if all_count > 0 else 0,
+            'relevant_matched': relevant.id.count(),
+            'relevant_rate': relevant.id.count() / all_count * 100 if all_count > 0 else 0,
             'paid_out': payout.id.count(),
             'paid_out_rate': payout.id.count() / all_count * 100 if all_count > 0 else 0,
             'unmatched': noFound.id.count() + noMatch.id.count(),
