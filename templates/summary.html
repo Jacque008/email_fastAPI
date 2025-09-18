@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html >
-
+<html>
 <head>
   <meta charset="UTF-8">
   <title>Konversationssammanfattning</title>
@@ -9,9 +8,7 @@
   <link href='https://fonts.googleapis.com/css?family=Hind:300' rel='stylesheet' type='text/css'>
   <link href='https://fonts.googleapis.com/css?family=Open+Sans+Condensed:300' rel='stylesheet' type='text/css'>
   <link rel="stylesheet" href="/static/css/style.css"> 
-  
 </head>
-
 <body>
     <div class="ban">
         <h3>{{ title or "Sammanfattnings-API för Chat, E-post, Kommentarer och Kombinerad Information" }}</h3>
@@ -19,14 +16,14 @@
         <br>
         <div>
             <form class="float-title" method="POST" enctype="multipart/form-data">
-            <label for="emailId">E-post ID:</label>
-            <input type="number" id="emailId" name="emailId" value="{{ emailId or '' }}"><br><br>
+            <label for="email_id">E-post ID:</label>
+            <input type="number" id="email_id" name="email_id" value="{{ input_params.email_id if input_params and input_params.email_id else '' }}"><br><br>
     
             <label for="reference">Referens:</label>
-            <input type="text" id="reference" name="reference" value="{{ reference or '' }}"><br><br>
+            <input type="text" id="reference" name="reference" value="{{ input_params.reference if input_params and input_params.reference else '' }}"><br><br>
     
-            <label for="errandNumber">Ärende Nummer:</label>
-            <input type="text" id="errandNumber" name="errandNumber" value="{{ errandNumber or '' }}"><br>
+            <label for="errand_number">Ärende Nummer:</label>
+            <input type="text" id="errand_number" name="errand_number" value="{{ input_params.errand_number if input_params and input_params.errand_number else '' }}"><br>
 
             <input type="submit" value="Skicka">
             </form>
@@ -54,16 +51,16 @@
                 {% else %}
                     <h2><b>Sammanfattning av Chat</b></h2>
                     <hr>
-                    {% if result.summary_clinic and result.clinic_name %}
+                    {% if result.summary_chat_with_clinic and result.clinic_name %}
                         <h3>Mellan <b>DRP</b> och <b>{{ result.clinic_name }}</b>:</h3>
-                        <p>{{ result.summary_clinic.replace('\n', '<br>')|safe }}</p>
+                        <p>{{ result.summary_chat_with_clinic.replace('\n', '<br>')|safe }}</p>
                     {% else %}
                         <p class="nocontent">Ingen Sammanfattning Tillgänglig för Klinikchattar.</p>
                     {% endif %}
                     <br>
-                    {% if result.summary_ic and result.ic_name %}
+                    {% if result.summary_chat_with_ic and result.ic_name %}
                         <h3>Mellan <b>DRP</b> och <b>{{ result.ic_name }}</b> :</h3>
-                        <p>{{ result.summary_ic.replace('\n', '<br>')|safe  }}</p>
+                        <p>{{ result.summary_chat_with_ic.replace('\n', '<br>')|safe  }}</p>
                     {% else %}
                         <p class="nocontent">Ingen Sammanfattning Tillgänglig för Försäkringsbolagschattar.</p>
                     {% endif %}
@@ -78,9 +75,9 @@
                 {% else %}
                     <h2><b>Sammanfattning av Email</b></h2>
                     <hr>
-                    {% if result.summary_email and result.sender and result.recipient %}
-                        <h3>Mellan <b>{{ result.sender }}</b>, <b>DRP</b> och <b>{{ result.recipient }}</b> :</h3>
-                        <p>{{ result.summary_email.replace('\n', '<br>')|safe  }}</p>
+                    {% if result.summary_email_conversation and result.email_sender and result.email_receiver %}
+                        <h3>Mellan <b>{{ result.email_sender }}</b>, <b>DRP</b> och <b>{{ result.email_receiver }}</b> :</h3>
+                        <p>{{ result.summary_email_conversation.replace('\n', '<br>')|safe  }}</p>
                     {% else %}
                         <p class="nocontent">Ingen Sammanfattning Tillgänglig för Email.</p>
                     {% endif %}
@@ -123,14 +120,14 @@
         </div>
 
         <div class="container bottom-container">
-            {% if result.error_combine %}
+            {% if result.error_combined %}
                 <h2><b>Felmeddelande</b> :</h2>
                 <hr>
-                <p class="nocontent">{{ result.error_combine }}</p>
+                <p class="nocontent">{{ result.error_combined }}</p>
             {% else %}
                 <h2 class="vertical-left"><b>Kombinerad Sammanfattning</b></h2>
-                {% if result.summary_combine %}
-                    <p class="vertical-right">{{ result.summary_combine.replace('\n', '<br>')|safe  }}</p>
+                {% if result.summary_combined %}
+                    <p class="vertical-right">{{ result.summary_combined.replace('\n', '<br>')|safe  }}</p>
                 {% else %}
                     <p class="vertical-right nocontent">Ingen Kombinerad Sammanfattning Tillgänglig.</p>
                 {% endif %}
@@ -138,6 +135,37 @@
         </div>
     </div>  
     {% endif %}
-    <a href="/dashboard" class="back-button">⬅️ Dashboard</a> 
+    
+    <a href="/dashboard" class="back-button">⬅️ Dashboard</a>
+    
+    <script>
+        // Clear other fields when user starts typing in one field
+        document.addEventListener('DOMContentLoaded', function() {
+            const emailId = document.getElementById('email_id');
+            const errandNumber = document.getElementById('errand_number');
+            const reference = document.getElementById('reference');
+            
+            emailId.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    errandNumber.value = '';
+                    reference.value = '';
+                }
+            });
+            
+            errandNumber.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    emailId.value = '';
+                    reference.value = '';
+                }
+            });
+            
+            reference.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    emailId.value = '';
+                    errandNumber.value = '';
+                }
+            });
+        });
+    </script>
 </body>
 </html>

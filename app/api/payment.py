@@ -5,7 +5,7 @@ import os
 import json
 from ..schemas.payment import PaymentIn, PaymentOut
 from ..dataset.payment_dataset import PaymentDataset
-from .deps import get_current_active_user
+from ..core.auth import get_current_user
 
 # Get templates directory
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -15,7 +15,7 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 router = APIRouter()
 
 @router.get("/payment")
-async def payment_page(request: Request, user=Depends(get_current_active_user)):
+async def payment_page(request: Request, user=Depends(get_current_user)):
     """Payment matching page - GET"""
     return templates.TemplateResponse("payment.html", {"request": request})
 
@@ -23,12 +23,12 @@ async def payment_page(request: Request, user=Depends(get_current_active_user)):
 async def process_payment_matching(
     request: Request,
     payment_file: UploadFile = File(...),
-    user=Depends(get_current_active_user)
+    user=Depends(get_current_user)
 ):
     """Process payment matching from uploaded JSON file"""
     try:
         # Validate file type
-        if not payment_file.filename.endswith('.json'):
+        if payment_file.filename and not payment_file.filename.endswith('.json'):
             return templates.TemplateResponse("payment.html", {
                 "request": request,
                 "error": "Please upload a JSON file"
@@ -94,8 +94,7 @@ async def process_payment_matching(
 
 @router.post("/payment_api", response_model=Union[PaymentOut, List[PaymentOut]])
 async def payment_matching_api(
-    payment_data: Union[Dict[str, Any], List[Dict[str, Any]]],
-    user=Depends(get_current_active_user)
+    payment_data: Union[Dict[str, Any], List[Dict[str, Any]]]
 ) -> Union[PaymentOut, List[PaymentOut]]:
     """API endpoint for payment matching - accepts JSON with payment data format
     

@@ -338,7 +338,6 @@ class StaffResolver(BaseService):
     def __init__(self):
         super().__init__()
         self.staff_animal_df = get_staffAnimal()
-        # print(self.staff_animal_df.loc[self.staff_animal_df['Klinik']=='Veterinärkliniken Arken Zoo Nyköping'])
     
     def detect_staff_animals(self, df: pd.DataFrame) -> pd.DataFrame:
         needed = ['id','category','receiver','animalName','ownerName','subject','origin','email','isStaffAnimal']
@@ -475,7 +474,6 @@ class AddressResolver(BaseService):
             self.fb_forw_add = self.fb[:17].set_index('insuranceCompany')['forwardAddress'].to_dict()
             self.clinic_forw_add = self.clinic.loc[self.clinic['role'] == 'main_email', ['clinicName','clinicEmail']].drop_duplicates()
         except Exception as e:
-            print(f"Failed to setup resolver configs: {str(e)}")
             self.fb_forw_add = {}
             self.clinic_forw_add = pd.DataFrame()
   
@@ -530,7 +528,7 @@ class AddressResolver(BaseService):
             admin_name = admin_df['firstName'].values[0] if not admin_df.empty else ''
             self.result['adminInfo'] = admin_name
         except Exception as e:
-            print(f"Failed to resolve admin info: {str(e)}")
+            pass
         
         return self
     

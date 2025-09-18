@@ -116,33 +116,7 @@
           </div>
       {% endif %}
     </div>
-    
-    <!-- Debug: 20 Random Reliable Connected Emails -->
-    {% if debug_emails %}
-      <div class="debug-section" style="margin: 30px 0; padding: 20px; background-color: #fff9c4; border: 2px solid #f57c00; border-radius: 6px;">
-        <h3 style="color: #e65100; margin-bottom: 15px;">🔍 DEBUG: 20 Slumpmässiga Pålitliga Anslutna E-postmeddelanden</h3>
-        <div class="debug-container" style="max-height: 500px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px; background-color: white;">
-          {% for email in debug_emails %}
-            <div class="debug-email" style="margin-bottom: 15px; padding: 12px; border: 1px solid #ff9800; border-radius: 4px; background-color: #fafafa;">
-              <div class="debug-header" style="font-weight: bold; color: #e65100; margin-bottom: 8px; border-bottom: 1px solid #ff9800; padding-bottom: 4px;">
-                E-post ID: {{ email.id }} | Kategori: {{ email.category }} | Ansluten via: {{ email.connectedCol }}
-              </div>
-              <div class="debug-details" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 0.85em;">
-                <div><strong>Ärende ID:</strong> {{ email.errandId }}</div>
-                <div><strong>Referens:</strong> {{ email.reference }}</div>
-                <div><strong>Försäkringsref:</strong> {{ email.insuranceCaseRef }}</div>
-                <div><strong>Uppgörelse:</strong> {{ email.settlementAmount }}</div>
-                <div><strong>Total:</strong> {{ email.totalAmount }}</div>
-                <div><strong>Djur:</strong> {{ email.animalName }}</div>
-                <div><strong>Ägare:</strong> {{ email.ownerName }}</div>
-                <div><strong>Avsändare:</strong> {{ email.sender }}</div>
-                <div><strong>Källa:</strong> {{ email.source }}</div>
-              </div>
-            </div>
-          {% endfor %}
-        </div>
-      </div>
-    {% endif %}
+
     
     <a href="/dashboard" class="back-button">⬅️ Dashboard</a> 
 </body>

@@ -53,23 +53,6 @@ class EmailIn(BaseModel):
                 return None
         return v
 
-# class PreProcessedEmailOut(EmailIn):
-#     date: datetime 
-#     originSender: Optional[str] = None
-#     sender: Optional[str] = None
-#     source: Optional[str] = None
-#     originReceiver: Optional[str] = None
-#     receiver: Optional[str] = None
-#     sendTo: Optional[str] = None
-#     clinicCompType: Optional[str] = None
-#     reference: Optional[str] = None
-#     insuranceCaseRef: Optional[str] = None
-#     errandId: List[int] = Field(default_factory=list)
-#     category: Optional[str] = None
-#     origin: Optional[str] = None
-#     email: Optional[str] = None
-    
-
     
 class EmailOut(BaseModel):
     id: int

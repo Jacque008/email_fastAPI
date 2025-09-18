@@ -14,7 +14,7 @@
 <body>
     <div class="ban">
       <h3>E-post Vidarebefordran</h3>
-      
+
       <!-- Display messages -->
       {% if error_message %}
         <div class="error-message" style="color: red; margin: 10px 0; padding: 10px; background-color: #fdf0f0; border: 1px solid #f44336; border-radius: 4px;">
@@ -29,15 +29,13 @@
       {% endif %}
       
       <form class="float-title" method="POST">
-        <!-- <div style="margin-bottom: 15px;">-->
-          <label for="emailId">Ange E-post ID:&nbsp;&nbsp;&nbsp;&nbsp;</label>
-          <input type="number" id="emailId" name="emailId" placeholder="Ange E-post ID" value="{{ id or '' }}" required>
+          <label for="id">Ange E-post ID:&nbsp;&nbsp;&nbsp;&nbsp;</label>
+          <input type="number" id="id" name="id" placeholder="Ange E-post ID" value="{{ id or '' }}" required>
         
           <label for="userId">Användar-ID:&nbsp;&nbsp;&nbsp;&nbsp;</label>
           <input type="number" id="userId" name="userId" placeholder="Ange användar-ID" value="{{ userId or '' }}" required>
 
           <input type="submit" value="Bearbeta Vidarebefordran">
-        <!-- </div>-->
       </form>
     </div>
     
@@ -83,6 +81,6 @@
           </div>
       {% endif %}
     </div>
-
+     <a href="/dashboard" class="back-button">⬅️ Dashboard</a> 
 </body>
 </html>

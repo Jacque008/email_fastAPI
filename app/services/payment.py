@@ -45,7 +45,6 @@ class PaymentService(BaseService):
                 compiled_pattern = reg.compile(pattern, reg.DOTALL | reg.IGNORECASE)
                 self._precompiled_patterns[item] = compiled_pattern
             except Exception as e:
-                print(f"Failed to compile regex pattern for {item}: {e}")
                 self._precompiled_patterns[item] = None
                 
     def _get_entity_dicts(self):

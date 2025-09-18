@@ -15,7 +15,7 @@ class ErrandDataset:
         """Load errands by a SQL WHERE condition using the existing Connector."""
         services = services or DefaultServices()
         conn = services.get_connector()
-        df = conn.fetch_and_format_errand(condition_sql)
+        df = conn._fetch_and_format_errand(condition_sql)
         if df is None:
             df = pd.DataFrame()
         return cls(df=df, services=services)

@@ -5,13 +5,13 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from authlib.integrations.starlette_client import OAuth
 import jwt
 import os
-import pandas as pd
 from ..services.utils import fetchFromDB
 
 # Configuration
 JWT_SECRET = os.getenv("JWT_SECRET") or "fallback-secret-key"
 JWT_ALGORITHM = "HS256"
-JWT_EXPIRATION_HOURS = 24
+JWT_EXPIRATION_HOURS = 1  # Changed to 1 hour
+SESSION_EXPIRATION_HOURS = 1  # Session also expires after 1 hour
 
 security = HTTPBearer(auto_error=False)
 
@@ -106,41 +106,62 @@ class AuthService:
             # Log error and re-throw
             raise Exception(f"Database query failed: {str(e)}")
 
-def get_current_user(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Get current user (supports session and JWT)"""
-    user = None
+def _is_session_expired(login_time: str) -> bool:
+    """Check if session timestamp has expired"""
+    try:
+        login_timestamp = datetime.fromisoformat(login_time)
+        expiry_time = login_timestamp + timedelta(hours=SESSION_EXPIRATION_HOURS)
+        return datetime.now(timezone.utc) > expiry_time
+    except:
+        return True  # Invalid timestamp = expired
 
-    # Check for test API key in development mode
+def _get_test_user(request: Request) -> Optional[dict]:
+    """Get test user for development mode"""
     if os.getenv("ENV_MODE") == "local":
         api_key = request.headers.get("X-API-Key")
         if api_key == os.getenv("TEST_API_KEY", "test-key-123"):
-            # Return a mock user for testing
             return {
                 "sub": "test-user",
                 "email": "test@example.com",
                 "name": "Test User",
                 "provider": "api-key"
             }
+    return None
+
+def get_current_user(request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    """Get current user (supports session and JWT with expiration)"""
+
+    # Check for test user in development
+    test_user = _get_test_user(request)
+    if test_user:
+        return test_user
 
     # Check JWT token first
     if credentials:
         payload = AuthService.verify_token(credentials.credentials)
         user = payload.get("user")
+        if user:
+            return user
 
-    # Fallback to session
-    if not user:
-        user = request.session.get("user")
-    
+    # Check session with expiration
+    user = request.session.get("user")
+    login_time = request.session.get("login_time")
+
+    if user and login_time:
+        if _is_session_expired(login_time):
+            request.session.clear()
+            user = None
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     return user
 
-def get_optional_current_user(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
+def get_optional_current_user(request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
     """Get current user (optional, no exception thrown)"""
     try:
         return get_current_user(request, credentials)

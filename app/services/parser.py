@@ -61,9 +61,9 @@ class Parser(BaseService):
 
     def parse_provet_cloud_row(self, text, errandIds): # pass
         """
-        Parse sender and recipient of a completment reply email came from Provet Cloud.
+        Parse sender and receiver of a completment reply email came from Provet Cloud.
         """
-        email, sender, recipient = '', 'Provet_Cloud', None
+        email, sender, receiver = '', 'Provet_Cloud', None
         m = base_match(text, self.msg_provetcloud_reg)
         email = f"[BODY]{m}" if m else "[BODY]Provet_Cloud blank msg"
 
@@ -72,34 +72,34 @@ class Parser(BaseService):
             if clinic:
                 mClinic = self.extractor.extract_clinic_by_kws(clinic)
                 if mClinic: sender = mClinic
-            # recipient logic
+            # receiver logic
             mapping = [
                (lambda t: 'If', lambda t: 'If Skadeförsäkring' in t or reg.search(r'KD\d*-\d*-?\d*', t)),
                (lambda t: 'Folksam', lambda t: reg.search(r'och FF\d+S|CV-?\d*-?\d*', t)),
                (lambda t: 'Lassie', lambda t: reg.search(r'VOFF-?\w*-?\d*', t)),
                (lambda t: 'Svedea', lambda t: reg.search(r'HU\d{2}-|försäkringsnummer \d+', t)),
-               (lambda t: None, lambda t: base_match(t, self.recipient_provetcloud_reg) is not None),
+               (lambda t: None, lambda t: base_match(t, self.receiver_provetcloud_reg) is not None),
             ]
             for func, cond in mapping:
                 if cond(text):
-                    recipient = func(text) or recipient
+                    receiver = func(text) or receiver
                     break
-            if recipient and recipient.lower().find("many")>=0 and recipient.lower().find("pets")>=0:
-                recipient = "Many Pets"
+            if receiver and receiver.lower().find("many")>=0 and receiver.lower().find("pets")>=0:
+                receiver = "Many Pets"
             
-            for k, v in self.recipient_mappings.items():
-                if not recipient and (k + ' ') in text.lower():
-                    recipient = k
-                if k in (recipient or "").lower(): 
-                    recipient = v; break
+            for k, v in self.receiver_mappings.items():
+                if not receiver and (k + ' ') in text.lower():
+                    receiver = k
+                if k in (receiver or "").lower(): 
+                    receiver = v; break
 
         elif len(errandIds)==1:
             df = fetchFromDB(self.errand_info_query.format(COND=f"er.id = {errandIds[0]}"))
             if not df.empty:
                 sender = df['clinicName'].iloc[0]
-                recipient = df['insuranceCompany'].iloc[0]
+                receiver = df['insuranceCompany'].iloc[0]
 
-        return pd.Series({'email': email, 'sender': sender, 'recipient': recipient})
+        return pd.Series({'email': email, 'sender': sender, 'receiver': receiver})
 
     def handle_provet_cloud(self, df):
         df['sender'], df['receiver'] = df['originSender'], df['originReceiver']
@@ -112,7 +112,7 @@ class Parser(BaseService):
          
     def parse_wisentic_row(self, text):
         """
-        Determine actual sender / recipient from Wisentic based on email content.
+        Determine actual sender / receiver from Wisentic based on email content.
         """
         text_lower = text.lower()
         for sender, patterns in self.wisentic_sender_patts.items():
@@ -129,9 +129,9 @@ class Parser(BaseService):
         if mask_sender.any():
             df.loc[mask_sender, 'sender'] = df.loc[mask_sender, 'email'].apply(self.parse_wisentic_row)
 
-        mask_recipient = (df['originReceiver'] == 'Wisentic')
-        if mask_recipient.any():
-            df.loc[mask_recipient, 'recipient'] = df.loc[mask_recipient, 'email'].apply(self.parse_wisentic_row)
+        mask_receiver = (df['originReceiver'] == 'Wisentic')
+        if mask_receiver.any():
+            df.loc[mask_receiver, 'receiver'] = df.loc[mask_receiver, 'email'].apply(self.parse_wisentic_row)
 
         return df
     
