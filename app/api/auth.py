@@ -1,11 +1,10 @@
-from typing import Dict, Any
-from fastapi import APIRouter, Request, HTTPException, status, Depends
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi import APIRouter, Request, HTTPException
+from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from authlib.integrations.starlette_client import OAuthError
 import os
 from ..core.auth import oauth, AuthService
-from .deps import get_optional_user
+
 
 # Get templates directory
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -15,185 +14,123 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 router = APIRouter()
 
 @router.get("/login")
-async def login_page(request: Request, user=Depends(get_optional_user)):
-    """OAuth login page - shows dashboard if logged in, otherwise redirects to Google OAuth"""
-    if user:
-        # Extract user name/email for display
-        user_display = user.get("name") or user.get("email") or "User" if isinstance(user, dict) else str(user)
+async def login_page(request: Request, force_fresh: bool = False):
+    """OAuth login page - check authentication or force fresh login"""
+
+    if force_fresh:
+        request.session.clear()
+        return RedirectResponse(url="/auth/google", status_code=302)
+
+    # Check if user is already authenticated
+    try:
+        from ..core.auth import get_current_user
+        from ..core.auth import security
+        credentials = await security(request)
+        if credentials:
+            user = get_current_user(request, credentials)
+        else:
+            raise HTTPException(status_code=401, detail="No credentials")
+
+        # Show dashboard if authenticated
+        user_display = user.get("name") or user.get("email") or "User"
         return templates.TemplateResponse("dashboard.html", {
-            "request": request, 
+            "request": request,
             "user": user,
             "userId": user_display
         })
-    
-    # Redirect directly to Google OAuth instead of showing a message
-    return RedirectResponse(url="/auth/google", status_code=status.HTTP_302_FOUND)
+    except:
+        # Not authenticated, clear session and redirect to OAuth
+        request.session.clear()
+        return RedirectResponse(url="/auth/google", status_code=302)
 
 @router.get("/auth/google")
 async def google_auth(request: Request):
-    """Initiate Google OAuth login"""
+    """Initiate Google OAuth login with forced account selection"""
     if not oauth.google:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Google OAuth is not configured"
-        )
-    
+        raise HTTPException(status_code=500, detail="Google OAuth is not configured")
+
     redirect_uri = os.getenv("GOOGLE_REDIRECT_URI") or request.url_for("google_callback")
     state = os.urandom(32).hex()
-    
-    # Clear any existing state and set new one
+
+    # Set OAuth state
     request.session.clear()
     request.session["oauth_state"] = state
-    
-    print(f"DEBUG Auth - Generated state: {state}")
-    print(f"DEBUG Auth - Stored in session: {request.session.get('oauth_state')}")
-    print(f"DEBUG Auth - Using redirect_uri: {redirect_uri}")
-    
-    return await oauth.google.authorize_redirect(request, redirect_uri, state=state)
+
+    # Force account selection and consent to prevent auto-login
+    return await oauth.google.authorize_redirect(
+        request, redirect_uri, state=state, prompt="select_account consent"
+    )
 
 @router.get("/auth/google/callback")
 async def google_callback(request: Request):
     """Handle Google OAuth callback"""
     if not oauth.google:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Google OAuth is not configured"
-        )
-    
+        raise HTTPException(status_code=500, detail="Google OAuth is not configured")
+
     try:
-        # Verify state parameter
+        # Verify state parameter for CSRF protection
         state = request.query_params.get("state")
         session_state = request.session.get("oauth_state")
-        
-        print(f"DEBUG Callback - URL state: {state}")
-        print(f"DEBUG Callback - Session state: {session_state}")
-        print(f"DEBUG Callback - Session data: {dict(request.session)}")
-        
-        if not state:
-            print(f"DEBUG: No state in URL")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing state parameter in callback URL"
-            )
-        
-        if not session_state:
-            print(f"DEBUG: No state in session - session may have expired")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Session expired. Please try logging in again."
-            )
-            
-        if state != session_state:
-            print(f"DEBUG: State mismatch - URL: '{state}', Session: '{session_state}'")
-            # Clear the bad session state
+
+        if not state or not session_state or state != session_state:
             request.session.clear()
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Session state mismatch. Please try logging in again."
-            )
+            raise HTTPException(status_code=400, detail="Invalid OAuth state. Please try again.")
         
-        # Get access token
+        # Get user info from Google
         token = await oauth.google.authorize_access_token(request)
         user_info = token.get("userinfo")
-        
-        if not user_info:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to get user info from Google"
-            )
-        
-        # Check if user is authorized
+
+        if not user_info or not user_info.get("email"):
+            raise HTTPException(status_code=400, detail="Failed to get user info from Google")
+
+        # Check email authorization
         user_email = user_info.get("email")
-        if not user_email:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No email found in user info"
-            )
-        
-        # Verify email authorization
-        try:
-            is_authorized = AuthService.check_email_authorization(user_email)
-            if not is_authorized:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Access denied for email: {user_email}"
-                )
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Authorization check failed: {str(e)}"
-            )
-        
-        # Store user info in session
-        user_data = {
+        if not AuthService.check_email_authorization(user_email):
+            raise HTTPException(status_code=403, detail=f"Access denied for email: {user_email}")
+
+        # Store user session with timestamp
+        from datetime import datetime, timezone
+        request.session["user"] = {
             "sub": user_info.get("sub"),
             "email": user_email,
             "name": user_info.get("name", ""),
             "picture": user_info.get("picture", ""),
             "provider": "google"
         }
-        request.session["user"] = user_data
-        
-        # Clean up OAuth state
+        request.session["login_time"] = datetime.now(timezone.utc).isoformat()
         request.session.pop("oauth_state", None)
-        
-        # Redirect to dashboard after successful login
-        return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
+
+        return RedirectResponse(url="/dashboard", status_code=302)
         
     except OAuthError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"OAuth error: {str(e)}"
-        )
+        raise HTTPException(status_code=400, detail=f"OAuth error: {str(e)}")
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Authentication failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Authentication failed: {str(e)}")
 
-@router.post("/auth/token")
-async def create_token(request: Request, user=Depends(get_optional_user)) -> Dict[str, Any]:
-    """Create JWT token for authenticated user"""
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated"
-        )
-    
-    # Create JWT token
-    access_token = AuthService.create_access_token(data={"user": user})
-    
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user": user
-    }
-
-@router.get("/auth/me")
-async def get_current_user_info(user=Depends(get_optional_user)) -> Dict[str, Any]:
-    """Get current user information"""
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated"
-        )
-    
-    return {"user": user}
-
-@router.post("/auth/logout")
-async def logout(request: Request):
-    """Logout user"""
-    request.session.clear()
-    return {"message": "Logged out successfully"}
-
-@router.post("/logout")
-async def logout_root(request: Request):
-    """Logout user (root path)"""
-    request.session.clear()
-    return {"message": "Logged out successfully"}
 
 @router.get("/logout")
 async def logout_get(request: Request):
-    """Logout user (GET method for browser access)"""
+    """Logout user (GET method for browser access) with complete credential invalidation"""
+    # Clear session completely
     request.session.clear()
-    return {"message": "Logged out successfully"}
+
+    # Use template response with JavaScript cleanup
+    response = templates.TemplateResponse("logout.html", {
+        "request": request,
+        "message": "You have been logged out successfully! All credentials have been cleared."
+    })
+
+    # Server-side cookie clearing
+    response.delete_cookie("session", path="/")
+    response.delete_cookie("access_token", path="/")
+    response.delete_cookie("refresh_token", path="/")
+    response.delete_cookie("jwt", path="/")
+    response.delete_cookie("session", path="/", domain="127.0.0.1")
+    response.delete_cookie("session", path="/", domain="localhost")
+
+    # Cache control headers
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, private"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+
+    return response

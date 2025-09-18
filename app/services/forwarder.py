@@ -30,7 +30,6 @@ class Forwarder(BaseService):
             self.forward_format = pd.read_csv(f"{self.folder}/forwardFormat.csv")
             self.request_fw_sub = self.forward_suggestion[self.forward_suggestion['action']=='Forward_Subject'].templates.to_list()
         except Exception as e:
-            print(f"Failed to setup generation configs: {str(e)}")
             self.forward_format = pd.DataFrame()
             
 
@@ -38,6 +37,7 @@ class Forwarder(BaseService):
         """Generate forward subject based on email content and category"""
         try:
             forward_subject = base_match(email, self.request_fw_sub)
+
             if pd.isna(forward_subject):
                 subject_template = self._get_category_subject_template(category)
                 if subject_template:
@@ -46,7 +46,6 @@ class Forwarder(BaseService):
             return forward_subject.strip() if forward_subject else ""
             
         except Exception as e:
-            print(f"Failed to generate subject: {str(e)}")
             return ""
     
     def generate_email_content(self, row_data: Dict, admin_name: str = '') -> str:
@@ -64,7 +63,6 @@ class Forwarder(BaseService):
             return self._format_forward_text(forward_text)
             
         except Exception as e:
-            print(f"Failed to generate email content: {str(e)}")
             return ""
      
     def _get_category_subject_template(self, category: str) -> str:
@@ -113,7 +111,6 @@ class Forwarder(BaseService):
             return text
             
         except Exception as e:
-            print(f"Failed to process email text: {str(e)}")
             return email
 
     def _handel_colon(self, text: str) -> str:
@@ -176,8 +173,8 @@ class Forwarder(BaseService):
                 separator = "\n[Attachment]: "
                 return text + separator + "\n".join(attachment_list)
         except Exception as e:
-            print(f"Failed to process attachments: {str(e)}")
-        
+            pass
+
         return text
     
     def _generate_summary_info(self, row_data: Dict, text: str) -> str:
@@ -257,12 +254,10 @@ class Forwarder(BaseService):
                 return template.format(EMAIL=text, INFO=info, ADMIN=admin)
             
         except Exception as e:
-            print(f"Failed to generate category specific content: {str(e)}")
             # Fallback template with all required parameters
             try:
                 return template.format(WHO=sender, EMAIL=text, INFO=info, ADMIN=admin, REFERENCE=ref)
             except Exception as fallback_error:
-                print(f"Fallback template formatting also failed: {str(fallback_error)}")
                 return f"Hej {sender},\n\n{text}\n\n{info}\n\nMed vänlig hälsning,\n{admin}"
     
     def _get_provet_cloud_template(self) -> str:
@@ -294,6 +289,5 @@ class Forwarder(BaseService):
             
             return text
         except Exception as e:
-            print(f"Failed to format forward text: {str(e)}")
             return forward_text or ""
     

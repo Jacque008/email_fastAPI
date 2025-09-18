@@ -12,8 +12,7 @@ class Processor(BaseService):
         if is_integer_dtype(df['createdAt']):
             df['date'] = pd.to_datetime(df['createdAt'], unit='ms', utc=True).dt.tz_convert('Europe/Stockholm')
         else:
-            # df['date'] = pd.to_datetime(df['createdAt'], errors='coerce', utc=True).dt.tz_convert('Europe/Stockholm')
-            df = tz_convert(df, 'date')
+            df['date'] = pd.to_datetime(df['createdAt'], errors='coerce', utc=True).dt.tz_convert('Europe/Stockholm')
         df = df.drop(columns=['createdAt'])
 
         return df
@@ -81,13 +80,11 @@ class Processor(BaseService):
             try:
                 df[['origin','email']] = df.apply(lambda row: self.merge_html_text(row['subject'], row['textPlain'], row['textHtml'], parse_from='textPlain'), axis=1).apply(pd.Series)
             except Exception as e:
-                print(f"DEBUG generate_email_content: Provet_Cloud branch failed: {e}")
                 raise
         else:
             try:
                 df[['origin','email']] = df.apply(lambda row: self.merge_html_text(row['subject'], row['textPlain'], row['textHtml']), axis=1).apply(pd.Series)
             except Exception as e:
-                print(f"DEBUG generate_email_content: Default branch failed: {e}")
                 raise
                  
         return df 

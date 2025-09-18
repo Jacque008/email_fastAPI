@@ -44,10 +44,10 @@ class BaseService:
         self.clinic_provetcloud['keyword'] = self.clinic_provetcloud['provetCloud'].apply(lambda x: x.split(',') if isinstance(x, str) else [])
         self.msg_provetcloud_reg = self.forward_suggestion[self.forward_suggestion['action']=='ProvetCloud_Msg'].templates.to_list()
         self.clinic_provetcloud_reg = self.forward_suggestion[self.forward_suggestion['action']=='ProvetCloud_Clinic'].templates.to_list()
-        self.recipient_provetcloud_reg = self.forward_suggestion[self.forward_suggestion['action']=='ProvetCloud_Recipient'].templates.to_list()
+        self.receiver_provetcloud_reg = self.forward_suggestion[self.forward_suggestion['action']=='ProvetCloud_Recipient'].templates.to_list()
         
         # Insurance company mappings
-        self.recipient_mappings = {
+        self.receiver_mappings = {
             'sveland': 'Sveland',
             'agria': 'Agria',
             'dina': 'Dina Försäkringar',
@@ -69,4 +69,5 @@ class BaseService:
         self.admin_query = self.queries['admin'].iloc[0]
         self.update_clinic_email_query = self.queries['updateClinicEmail'].iloc[0]
         self.errand_info_query = self.queries['errandInfo'].iloc[0]
+        self.model_df = pd.read_csv(f"{self.folder}/model.csv")
 

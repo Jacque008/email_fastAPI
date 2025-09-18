@@ -1,8 +1,8 @@
 from __future__ import annotations
 import pandas as pd
-from typing import Optional, Dict, List
+from typing import Dict
 from dataclasses import dataclass, field
-from ..services.utils import fetchFromDB
+from ..services.utils import fetchFromDB, model_to_dataframe
 from ..services.services import DefaultServices
 from ..services.base_service import BaseService
 from ..schemas.forward import ForwardingIn, ForwardingOut
@@ -19,25 +19,16 @@ class ForwardingEmailDataset(BaseService):
         self.addressResolver = self.services.get_addressResolver()
         self._setup_generation_configs()
 
-    
     def _setup_generation_configs(self):
         self.forward_query = self.queries['forwardSummaryInfo'].iloc[0]
-        
-    def init_fw_email(self, request: ForwardingIn) -> "ForwardingEmailDataset":
-        """Initialize DataFrame with request data"""
-        self.df = pd.DataFrame([{
-            'id': request.id,
-            'userId': request.userId
-        }])
-
-        return self
     
-    def enrich_email_data(self) -> "ForwardingEmailDataset":
+    def enrich_email_data(self, request: ForwardingIn) -> "ForwardingEmailDataset":
         """Enrich DataFrame with email data from database"""
         try:
+            self.df = model_to_dataframe(request)
             if self.forward_query and not self.df.empty:
                 id = self.df.iloc[0]['id']
-
+                
                 bas_email = fetchFromDB(self.email_spec_query.format(EMAILID=id))
                 ds = EmailDataset(df=bas_email, services=self.services)
                 email = ds.do_preprocess()
@@ -48,12 +39,12 @@ class ForwardingEmailDataset(BaseService):
                 if existing_columns:
                     email = email.drop(columns=existing_columns)
                     
-                adds_on = fetchFromDB(self.forward_query.format(ID=id))          
+                adds_on = fetchFromDB(self.forward_query.format(ID=id))        
                 if not adds_on.empty:
                     self.df = email.merge(adds_on, on='id', how='left')
                     
         except Exception as e:
-            print(f"Failed to enrich with email data: {str(e)}")
+            pass
         return self
     
     def clean_email_content(self) -> "ForwardingEmailDataset":
@@ -62,20 +53,7 @@ class ForwardingEmailDataset(BaseService):
             if 'email' in self.df.columns:
                 self.df['email'] = self.df['email'].str.replace(r'\n\n+', '\n', regex=True)
         except Exception as e:
-            print(f"Failed to clean email content: {str(e)}")
-        return self
-    
-    def validate_data(self)-> "ForwardingEmailDataset":
-        """Validate required data is present"""
-        if self.df.empty:
-            return self
-        required_fields = ['id', 'receiver', 'correctedCategory']
-        for field in required_fields:
-            if field not in self.df.columns or self.df[field].isna().all():
-                print(f"Missing required field: {field}")
-                self.df = pd.DataFrame()  
-                break
-
+            pass
         return self
     
     def generate_forward_address(self, result: ForwardingOut, 
@@ -86,7 +64,7 @@ class ForwardingEmailDataset(BaseService):
             receiver = row_data.get('receiver', '')
             result.forward_address = self.addressResolver.detect_forward_address(source, receiver)
         except Exception as e:
-            print(f"Failed to generate forward address: {str(e)}")
+            pass
             result.forward_address = ""
         return result
     
@@ -103,9 +81,9 @@ class ForwardingEmailDataset(BaseService):
                 sender=row_data.get('sender', '')
             )
         except Exception as e:
-            print(f"Failed to generate forward subject: {str(e)}")
+            pass
             result.forward_subject = ""
-        
+
         return result
     
     def generate_forward_content(self, result: ForwardingOut, row_data: Dict) -> ForwardingOut:
@@ -118,23 +96,20 @@ class ForwardingEmailDataset(BaseService):
                 admin_name=admin_name.result['adminInfo']
             )
         except Exception as e:
-            print(f"Failed to generate forward content: {str(e)}")
+            pass
             result.forward_text = ""
         
         return result
     
-
     def do_forwarding(self, request: ForwardingIn) -> ForwardingOut:
         try:
             ds = ForwardingEmailDataset(services=self.services)
-            ds.init_fw_email(request)\
-              .enrich_email_data()\
-              .clean_email_content()#\
-            #   .validate_data()
+            (ds#.init_fw_email(request)
+              .enrich_email_data(request)
+              .clean_email_content())
             
             result = ForwardingOut(id=request.id)
             if ds.df.empty:
-                # result.error_message = "Failed to retrieve email data"
                 return result
 
             row_data = ds.df.iloc[0].to_dict()

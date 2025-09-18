@@ -228,15 +228,10 @@ class Classifier(BaseService):
         connected = df[df['errandId'].apply(len) > 0].shape[0]
         singleConnect = df[df['errandId'].apply(len) == 1].shape[0]
         note_values = df['note'].value_counts()
-        # print(f"Debug: Note column values: {note_values.to_dict()}")
         reliable = df[df['note']=='Reliable'].shape[0]
-        # print(f"Debug: Reliable count: {reliable}")
         auto = df[df['category']!='Manual_Handling_Required'].shape[0]
         manu = df[df['category']=='Manual_Handling_Required'].shape[0]
         staff_animals = df[df['isStaffAnimal']==True].shape[0]
-        print(f'''all_records: {all}, auto_categorized: {auto}, {auto/all*100:.2f}%, manual: {manu}, {manu/all*100:.2f}%, 
-                  connected_to_errands: {connected}, {connected/all*100:.2f}%, single_errandId: {singleConnect}, {singleConnect/all*100:.2f}%, \
-                  reliable_connection: {reliable}, {reliable/all*100:.2f}%, staff_animal: {staff_animals}, {staff_animals/all*100:.2f}%''')
         
         # Return statistics as dictionary for template display
         stats_dict = {
@@ -257,35 +252,25 @@ class Classifier(BaseService):
             mask_unconnect = (df['errandId'].apply(lambda x: len(x) == 0 if isinstance(x, (list, tuple)) else not bool(x)))
             if (category != 'Complement') and (category != 'Complement_Reply'):
                 mask_subCate = (df['category']==category)
-                print(f" - {category}: {df[mask_subCate].shape[0]}, connect:{df[mask_subCate & mask_connect].shape[0]}, un-connect: {df[mask_subCate & mask_unconnect].shape[0]}")
             elif category == 'Complement':
                 mask_dr = (df['category'] == 'Complement_DR_Insurance_Company')
                 mask_sa = (df['category'] == 'Complement_Damage_Request_Insurance_Company')
-                print(f" - Complement_DR_Insurance_Company: {df[mask_dr].shape[0]}, connect:{df[mask_dr & mask_connect].shape[0]}, un-connect: {df[mask_dr & mask_unconnect].shape[0]}")
-                print(f" - Complement_Damage_Request_Insurance_Company:,df[mask_sa].shape[0], connect:{df[mask_sa & mask_connect].shape[0]}, un-connect: {df[mask_sa & mask_unconnect].shape[0]}")
             else:
                 mask_dr = (df['category'] == 'Complement_Damage_Request_Clinic')
                 mask_sa = (df['category'] == 'Complement_DR_Clinic')
-                print(f" - Complement_Damage_Request_Clinic:, df.loc[mask_df].shape[0], connect:{df[mask_dr & mask_connect].shape[0]}, un-connect: {df[mask_dr & mask_unconnect].shape[0]}")
-                print(f" - Complement_DR_Clinic, df.loc[mask_df].shape[0], connect:{df[mask_sa & mask_connect].shape[0]}, un-connect: {df[mask_sa & mask_unconnect].shape[0]}")
     
                 # other statistic   
-                # print("0 kr",df[(df['settlementAmount'].notna()) & (df['settlementAmount']==0)].shape[0])
-                # print(">0 kr",df[(df['settlementAmount'].notna()) & (df['settlementAmount']>0)].shape[0]) 
+ 
                 # df.loc[df['category']==category,['id','originSender','email']].sort_values(by='originSender').to_csv(f"data/results/{category}.csv", index=False)
 
                 # sub = df.loc[df['category']==category]
                 # sub_all = sub.shape[0]
                 # sub_connected = sub[sub['errandId'].apply(len) > 0].shape[0]
-                # print(f"sub_connected: {sub_connected}, {sub_connected/sub_all*100:.2f}% {sub.groupby('connectedCol').shape[0]}")
                 # for col in self.number_reg_list.number.drop_duplicates().to_list():
                 #     if col != 'animalName_Sveland' and (df.loc[(df[col].notna())].shape[0] != 0):
-                #         print(f" ** ** {col}: {df.loc[(df[col].notna())].shape[0]} non-null, {(df.loc[df[col].notna()].shape[0])/all*100:.02f}%")
-            
-            # print("Extracted numbers and names:")
+                
             # for col in self.number_reg_list.number.drop_duplicates().to_list():
             #     if col != 'animalName_Sveland':
-            #         print(f" - {col}: {df.loc[df[col].notna()].shape[0]} non-null, {(df.loc[df[col].notna()].shape[0])/all*100:.02f}%")
         
         return stats_dict
     

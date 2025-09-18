@@ -452,7 +452,7 @@ class ChronologicalLog(LLMSummary):
             discrepancy = 0
             date = {}
             placeholder = '€' * 11
-            for idx, row in group_df.iterrows():
+            for idx, (_, row) in enumerate(group_df.iterrows()):
                 date[idx] = row['timestamp'][:10]
                 if idx > 0 and (idx - 1) in date and date[idx] == date[idx - 1]:
                     showDate = f'• At {row["timestamp"][11:]}'
@@ -516,10 +516,11 @@ class ChronologicalLog(LLMSummary):
                                           .replace('(/BOLD)', '</b>'))
             log_text = re.sub(r'[\t\r\n]+', '<br>', log_text)
             log_text = re.sub(r'(<br>€€€€€€€€€€€)+', '<br>€€€€€€€€€€€', log_text)
-            groupLog[group_id] = (log_text.replace('<br>€€€€€€€€€€€</span></i><br>','</span></i><br>')
+            formatted_log = (log_text.replace('<br>€€€€€€€€€€€</span></i><br>','</span></i><br>')
                                          .replace('€', '&nbsp;')
                                          .replace('<p><br></p>', ''))
-
+            print("formatted_log: \n", formatted_log)
+            groupLog[group_id] = formatted_log
             doc_text = (doc_text.replace('€','')
                                 .replace('(COLORBLUE)', '')
                                 .replace('(COLORGRAY)', '')  # Fix COLORGRAY handling

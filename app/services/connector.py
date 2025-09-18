@@ -105,7 +105,6 @@ class Connector(Processor):
            
     def _errand_row_filter(self, row, email_sender, email_receiver):
         # if row['reference'] == '1000725927':
-        # print(row['sender'], row['receiver'], email_sender, email_receiver)
         sender_match = (
             pd.notna(row['sender']) and pd.isna(row['receiver']) and pd.notna(email_sender) and
             check_eq(row['sender'], email_sender))
@@ -121,7 +120,6 @@ class Connector(Processor):
         
         empty_match = pd.isna(row['sender']) and pd.isna(row['receiver'])
 
-        # print("sender_match:", sender_match, "|| receiver_match:", receiver_match, "|| both_match:", both_match, "|| empty_match:", empty_match)
         return sender_match or receiver_match or both_match or empty_match 
         
     def _filter_candidate_errand(self, email_row: pd.Series, errand: pd.DataFrame) -> pd.DataFrame:
@@ -131,29 +129,24 @@ class Connector(Processor):
         email_source, email_sendTo   = email_row.get('source'), email_row.get('sendTo')
         email_sender = email_row.get('sender') if (pd.notna(email_row.get('sender'))) and (email_row.get('sender') not in ['DRP','Wisentic','Provet_Cloud']) else None
         email_receiver= email_row.get('receiver') if (pd.notna(email_row.get('receiver'))) and (email_row.get('receiver') not in ['DRP','Wisentic']) else None
-        # print("email_sender:",email_sender, "||  email_receiver:", email_receiver, "|| email_source:", email_source, "|| email_sendTo:", email_sendTo)
         cand = cand.assign(sender=pd.NA, receiver=pd.NA)
         if pd.notna(email_sender) and (email_source == 'Insurance_Company') and (email_sendTo == 'Clinic'):
             cand.loc[:, 'sender'] = cand['insuranceCompany']
             if pd.notna(email_receiver):
                 cand.loc[:, 'receiver'] = cand['clinicName']
-            # print("1: ", cand.loc[cand['reference']=='1000725927', ['sender', 'receiver']])
         elif pd.notna(email_sender) and (email_source == 'Clinic') and (email_sendTo == 'Insurance_Company'):
             cand.loc[:, 'sender'] = cand['clinicName']
             if pd.notna(email_receiver):
                 cand.loc[:, 'receiver'] = cand['insuranceCompany']
-            # print("2: ", cand.loc[cand['reference']=='1000725927', ['sender', 'receiver']])
         mask = cand.apply(lambda row: self._errand_row_filter(row, email_sender, email_receiver), axis=1)
         # if not mask.any():
-        # print(cand.loc[mask].errandId.count())
-        # print(cand.loc[mask, ['errandId','reference','insuranceCompany']].head(10))
-        # print("cand[mask]:\n",cand.loc[mask, ['errandId','clinicName','insuranceCompany']])
         return cand[mask]
 
     def _find_match_for_single_email(self, email_row: pd.Series, errand: pd.DataFrame) -> pd.Series:  
         matched_errand, connected_col, note = self._match_by_reference(email_row, errand)
         if matched_errand is not None:   
-            return self._fill_back_result(email_row, matched_errand, connected_col, note)
+            result_dict = self._fill_back_result(email_row, matched_errand, connected_col or "", note or "")
+            return pd.Series(result_dict)
         
         cand = self._filter_candidate_errand(email_row, errand)
         
@@ -162,17 +155,21 @@ class Connector(Processor):
             if matched_errand is None:
                 matched_errand, connected_col, note = self._match_by_name(email_row, cand)
             if matched_errand is not None:
-                return self._fill_back_result(email_row, matched_errand, connected_col, note)
+                result_dict = self._fill_back_result(email_row, matched_errand, connected_col or "", note or "")
+                return pd.Series(result_dict)
         
         # Return original email data with unmatched status
-        result = {"errand_matched": False}
         # Preserve original errandId if it exists
         cur_ids = email_row.get('errandId')
         if not isinstance(cur_ids, list):
             cur_ids = [] if pd.isna(cur_ids) else [cur_ids]
-        result['errandId'] = cur_ids
         
-        return result
+        result = {
+            "errand_matched": False,
+            "errandId": cur_ids
+        }
+        
+        return pd.Series(result)
         
     def _match_by_reference(self, email_row: pd.Series, errand: pd.DataFrame) -> Tuple[Optional[pd.Series], Optional[str], Optional[str]]:
         ref = email_row.get('reference')
@@ -327,8 +324,7 @@ class Connector(Processor):
         elif email_row['sender']=='Provet_Cloud' and pd.notna(matched_errand['clinicName']):
             res['sender'] = matched_errand['clinicName']
         
-        if email_row['id']==195443:
-            print(res)
+
         return res
 
 

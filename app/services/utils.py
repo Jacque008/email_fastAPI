@@ -3,13 +3,14 @@ import math
 import base64
 import gspread
 import pandas as pd
-from typing import Optional, List, TypeVar, Type, Mapping, Any
+from typing import Optional, List, TypeVar, Type, Mapping, Any, Union
 import regex as reg
 from functools import lru_cache
 from sqlalchemy import create_engine, text
 from pydantic import BaseModel
-# from google.cloud.sql.connector import Connector, IPTypes
-# from sqlalchemy.sql import text as sqlalchemy_text
+from groq import Groq
+from google.cloud.sql.connector import Connector, IPTypes
+from sqlalchemy.sql import text as sqlalchemy_text
 
 @lru_cache(maxsize=3)
 def load_sheet_data(url, worksheet, useCols=None):
@@ -52,30 +53,30 @@ def get_data_from_local_engine(db_user, db_password, db_host, db_port, db_name, 
     
     return data
 
-# def get_data_from_cloud_engine(db_user, db_password, db_name, query): 
-#     INSTANCE_CONNECTION_NAME = os.getenv('INSTANCE_CONNECTION_NAME')
+def get_data_from_cloud_engine(db_user, db_password, db_name, query): 
+    INSTANCE_CONNECTION_NAME = os.getenv('INSTANCE_CONNECTION_NAME')
 
-#     connector = Connector()  
-#     def getconn():
-#         conn = connector.connect(
-#             INSTANCE_CONNECTION_NAME,  # '/cloudsql/<project_id>:<region>:<instance_name>'
-#             "pg8000",
-#             user=db_user,
-#             password=db_password,
-#             db=db_name,
-#             ip_type=IPTypes.PUBLIC  # IPTypes.PRIVATE for private IP
-#         )
-#         return conn
+    connector = Connector()  
+    def getconn():
+        conn = connector.connect(
+            INSTANCE_CONNECTION_NAME,  # '/cloudsql/<project_id>:<region>:<instance_name>'
+            "pg8000",
+            user=db_user,
+            password=db_password,
+            db=db_name,
+            ip_type=IPTypes.PUBLIC  # IPTypes.PRIVATE for private IP
+        )
+        return conn
 
-#     pool = create_engine("postgresql+pg8000://",creator=getconn)        
-#     with pool.connect() as db_conn:
-#         result = db_conn.execute(sqlalchemy_text(query))
-#         data = result.fetchall()
-#         data = pd.DataFrame(data, columns=result.keys())
+    pool = create_engine("postgresql+pg8000://",creator=getconn)        
+    with pool.connect() as db_conn:
+        result = db_conn.execute(sqlalchemy_text(query))
+        data = result.fetchall()
+        data = pd.DataFrame(data, columns=result.keys())
                     
-#     connector.close()
+    connector.close()
     
-#     return data
+    return data
          
 def fetchFromDB(query):
     db_name = os.getenv('DB_NAME')
@@ -84,7 +85,11 @@ def fetchFromDB(query):
     db_port = os.getenv('DB_PORT')
     
     if os.getenv("ENV_MODE") == "local":
-        db_password = base64.b64decode(os.getenv('DB_PASSWORD')).decode('utf-8')
+        db_password_encoded = os.getenv('DB_PASSWORD')
+        if db_password_encoded:
+            db_password = base64.b64decode(db_password_encoded).decode('utf-8')
+        else:
+            raise ValueError("DB_PASSWORD environment variable is not set")
         data = get_data_from_local_engine(db_user, db_password, db_host, db_port, db_name, query)
     elif os.getenv("ENV_MODE") in ['test','production']:
         db_password = os.getenv('DB_PASSWORD')
@@ -160,22 +165,23 @@ def parse_to_column(df, col='to', new_col='parsedTo'):
 def base_match(text: str, patterns: List[str]) -> Optional[str]:
     for p in map(lambda r: reg.compile(r, reg.DOTALL|reg.MULTILINE), patterns):
         matched = p.search(text)
-        if matched: 
-            # print(p)
-            # print(matched)
-            # print(matched.group(1))
+        if matched:
             return matched.group(1)
     return None   
 
 T = TypeVar("T", bound=BaseModel)
-def model_to_dataframe(inputs: List[T]) -> pd.DataFrame:
-    """Convert list of PaymentIn objects to pandas DataFrame"""
-    dicts = []
-    for input in inputs:
+def model_to_dataframe(input: Union[T, List[T]]) -> pd.DataFrame:
+    """Convert Pydantic model object(s) to pandas DataFrame"""
+    if isinstance(input, list):
+        # Handle list of models (original behavior)
+        if not input:
+            return pd.DataFrame()
+        dicts = [model.model_dump() for model in input]
+        return pd.DataFrame(dicts)
+    else:
+        # Handle single model
         dict = input.model_dump()
-        dicts.append(dict)
-    
-    return pd.DataFrame(dicts)
+        return pd.DataFrame([dict])
     
 def dataframe_to_model(df: pd.DataFrame, model_cls: Type[T], rename: Optional[Mapping[str, str]] = None,       
     defaults: Optional[Mapping[str, Any]] = None, drop_unknown: bool = True, nan_as_none: bool = True,                         
@@ -290,4 +296,83 @@ def tz_convert(df: pd.DataFrame, time_col: str) -> pd.DataFrame:
 #     bucket = client.bucket(bucket_name)
 #     blob = bucket.blob(dest_path)
 #     blob.upload_from_filename(local_path)
-#     print(f"Uploaded to gs://{bucket_name}/{dest_path}")
+ 
+def skip_thinking_part(model: str, content: str) -> str:
+    """
+    Format AI response content based on model type.
+    
+    Args:
+        model: The name of the AI model
+        content: The raw AI response content
+        
+    Returns:
+        str: Formatted content with reasoning removed for DeepSeek models
+    """
+    if model.lower().startswith('deepseek'):
+        reasoning_patterns = [
+            r'<think>.*?</think>\s*',
+            r'<thinking>.*?</thinking>\s*',
+            r'<reasoning>.*?</reasoning>\s*',
+            r'<analysis>.*?</analysis>\s*'
+        ]
+        
+        result = content
+        for pattern in reasoning_patterns:
+            result = reg.sub(pattern, '', result, flags=reg.DOTALL | reg.IGNORECASE)
+
+        result = reg.sub(r'^.*?(?:thinking|reasoning|analysis).*?\n\n', '', result, flags=reg.DOTALL | reg.IGNORECASE | reg.MULTILINE)
+        result = result.strip()
+    else:
+        parts = reg.split(r':\s*', content)
+        if len(parts) > 1:
+            result = ":".join(parts[1:])
+        else:
+            result = content
+
+    return result
+
+def get_groq_client() -> Groq:
+    """Get cached Groq client or create new one"""
+    api_key = os.getenv('GROQ_API_KEY')
+    if not api_key:
+        raise ValueError("GROQ_API_KEY environment variable is not set")
+    groq_client = Groq(api_key=api_key)
+    return groq_client
+
+    
+def groq_chat_with_fallback(groq_client: Groq, messages: list, current_model: str) -> tuple[str, str]:
+    """
+    Make Groq API call with automatic model switching on rate limits.
+    
+    Args:
+        groq_client: Groq client instance
+        messages: List of message dictionaries for the API call
+        current_model: Current model being used
+        
+    Returns:
+        Tuple of (response_content, used_model)
+    """
+    # Define available models for fallback
+    models = ["deepseek-r1-distill-llama-70b", "llama-3.3-70b-versatile"]
+    
+    # Try current model first, then fallback models
+    models_to_try = [current_model] + [m for m in models if m != current_model]
+    
+    for model_name in models_to_try:
+        try:
+            chat_completion = groq_client.chat.completions.create(
+                messages=messages,
+                model=model_name,
+            )
+            content = chat_completion.choices[0].message.content
+            print("\nfallback - ai_response: \n", content)
+            return content or "", model_name
+            
+        except Exception as e:
+            error_msg = str(e).lower()
+            if 'rate limit' in error_msg:
+                print(f"Switch model from {model_name} to {set(models_to_try)-set(model_name)} due to reach rate limit.")
+            else:
+                raise e
+    
+    raise Exception("All models hit rate limits")

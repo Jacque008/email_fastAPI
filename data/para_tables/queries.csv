@@ -1,4 +1,4 @@
-id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,errandLink,payout,summaryChat,summaryEmail,summaryComment,info,logBase,logEmail,logChat,logComment,logInvoiceSP,logInvoiceFO,logInvoiceKA,logReceive,logCancel,logRemoveCancel,admin,updateClinicEmail
+id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,errandLink,payout,summaryChat,summaryEmail,summaryComment,info,logBase,logEmail,logChat,logComment,logOriginalInvoice,logInvoiceSP,logInvoiceFO,logInvoiceKA,logReceive,logCancel,logRemoveCancel,admin,updateClinicEmail
 1," SELECT DISTINCT 
                             er.id AS ""errandId"" ,
                             er.reference AS ""errandNumber"" ,
@@ -6,7 +6,7 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                             fb.""name"" AS ""insuranceCompany"" ,
                             c.""name"" AS ""clinicName"" ,
                             ROUND((sums.""totalAmount"" + 50) / 100) AS ""totalAmount"",
-                            ls.""settlementAmount"" / 100 AS ""settlementAmount"", 
+                            ls.""settlementAmount"" , 
                             ic.reference ,
                             ic.""insuranceNumber"" ,
                             ic.""damageNumber"" ,
@@ -29,7 +29,7 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                                   ) sums ON ic.id = sums.""insuranceCaseId""
                         LEFT JOIN ( SELECT DISTINCT 
                                         ist.""insuranceCaseId"",
-                                        ist.""settlementAmount""
+                                        ROUND(ist.""settlementAmount"" / 100, 2) AS ""settlementAmount""
                                     FROM insurance_settlement ist
                                     WHERE ist.""updatedAt"" = (
                                           SELECT MAX(inst.""updatedAt"")
@@ -65,13 +65,13 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                                 COALESCE(e.""errandId"", (ecr.""data"" -> 'errandId'->> 0)::int) AS ""errandId"" ,
                                 ic.reference ,
                                 er.""invoiceReference"" ,
+                                COALESCE(ecr.""correctedCategory"", ecr.""category"") AS ""correctedCategory"" ,
                                 ecr.""data"" ->> 'sender' AS ""sender"" ,
                                 ecr.""data"" ->> 'insuranceNumber' AS ""insuranceNumber"" ,
                                 ecr.""data"" ->> 'damageNumber' AS ""damageNumber"" ,
                                 ecr.""data"" ->> 'animalName' AS ""animalName"" ,
                                 ecr.""data"" ->> 'ownerName' AS ""ownerName"" ,
-                                ecr.""data"" ->> 'recipient' AS ""receiver"" ,
-                                COALESCE(ecr.""correctedCategory"", ecr.""category"") AS ""correctedCategory""
+                                ecr.""data"" ->> 'recipient' AS ""receiver"" 
                             FROM email e 
                             INNER JOIN email_category_request ecr ON ecr.""emailId"" = e.id
                             LEFT JOIN errand er ON er.id = COALESCE(e.""errandId"", (ecr.""data"" -> 'errandId'->> 0)::int)
@@ -113,13 +113,13 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                                       FROM insurance_settlement inst
                                       WHERE inst.""insuranceCaseId"" = ist.""insuranceCaseId"")
                                 ) AS ls ON ls.""insuranceCaseId"" = ic.id
-                    WHERE es.cancelled = False 
+                    WHERE es.cancelled = False
                           AND es.complete IS FALSE
                           {CONDITION}
                     ORDER BY er.""createdAt"" DESC;","  SELECT DISTINCT
                           ic.id,
                           er.reference AS ""errandNumber"",
-                          ic.reference AS ""reference""
+                          ic.reference
                       FROM insurance_case ic 
                       INNER JOIN errand er ON ic.""errandId"" = er.id
                       WHERE {CONDITION};","  SELECT DISTINCT
@@ -166,7 +166,7 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                           e.""errandId"",
                           e.folder ,
                           ecr.""data"" ->> 'sender' AS ""sender"",
-                          ecr.""data"" ->> 'recipient' AS ""recipient""
+                          ecr.""data"" ->> 'recipient' AS ""receiver""
                       FROM email e
                       LEFT JOIN email_category_request ecr ON e.id = ecr.""emailId""
                       INNER JOIN errand er ON e.""errandId"" = er.id
@@ -193,7 +193,7 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                     e.id,
                     ecr.""timestamp"",
                     ecr.""data"" ->> 'sender' AS ""sender"" ,
-                    ecr.""data"" ->> 'recipient' AS ""recipient"" ,
+                    ecr.""data"" ->> 'recipient' AS ""receiver"" ,
                     ecr.""data"" ->> 'source' AS ""source"" ,
                     ecr.category ,
                     ecr.""correctedCategory"" ,
@@ -203,35 +203,33 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                 WHERE {CONDITION}
                     AND (ecr.category = 'Information' OR ecr.""correctedCategory"" = 'Information')
                     LIMIT 1;"," SELECT  
-                      er.id AS ""errandId"" ,
-                      er.reference AS ""errandNumber"" ,
-                      er.""createdAt"" AS ""errandCreaTime"" ,
-                      ic.id AS ""insuranceCaseId"" ,
-                      ic.reference ,
-                      ls.""settlementAmount"" ,
-                      ls.""updatedTime"" ,
-                      er.""clinicId"" ,
-                      c.name AS ""clinicName"" ,
-                      ic.id AS ""insuranceCompanyId"" ,
-                      fb.""name"" AS ""insuranceCompanyName"" ,
-                      ic.""insuranceEmailLastSent"" AS ""sendTime"" 
-                  FROM errand er 
+                    er.id AS ""errandId"" ,
+                    er.reference AS ""errandNumber"" ,
+                    er.""createdAt"" AS ""errandCreaTime"" ,
+                    ic.id AS ""insuranceCaseId"" ,
+                    ic.reference ,
+                    ls.""settlementAmount"" ,
+                    ls.""updatedAt"" AS ""updatedTime"" ,
+                    er.""clinicId"" ,
+                    c.""name"" AS ""clinicName"" ,
+                    ic.id AS ""insuranceCompanyId"" ,
+                    ic2.""name"" AS ""insuranceCompanyName"" ,
+                    ic.""insuranceEmailLastSent"" AS ""sendTime"" ,
+                    es.complete 
+                  FROM errand er
                   INNER JOIN insurance_case ic ON ic.""errandId"" = er.id
-                  LEFT JOIN ( SELECT DISTINCT 
-                                        ist.""insuranceCaseId"" ,
-                                        ROUND(ist.""settlementAmount"" / 100, 2) AS ""settlementAmount"" ,
-                                        ist.""updatedAt"" AS ""updatedTime""
-                                    FROM insurance_settlement ist
-                                    WHERE ist.""updatedAt"" = (
-                                          SELECT MAX(inst.""updatedAt"")
-                                          FROM insurance_settlement inst
-                                          WHERE inst.""insuranceCaseId"" = ist.""insuranceCaseId"")
-                                    ) AS ls ON ls.""insuranceCaseId"" = ic.id
-                  INNER JOIN clinic c ON c.id = er.""clinicId"" 
-                  INNER JOIN insurance_company_email ice ON ice.id = ic.""insuranceCompanyEmailId"" 
-                  INNER JOIN insurance_company fb ON fb.id = ice.""insuranceCompanyId"" 
-                  WHERE {COND1}
-                    AND {COND2}
+                  LEFT JOIN ( SELECT DISTINCT ist.""insuranceCaseId"", ROUND(ist.""settlementAmount"" / 100, 2) AS ""settlementAmount"" , ist.""updatedAt""
+                              FROM insurance_settlement ist
+                              WHERE ist.""updatedAt"" = (
+                                    SELECT MAX(inst.""updatedAt"")
+                                    FROM insurance_settlement inst
+                                    WHERE inst.""insuranceCaseId"" = ist.""insuranceCaseId"")
+                              ) AS ls ON ls.""insuranceCaseId"" = ic.id
+                  JOIN clinic c ON c.id = er.""clinicId"" 
+                  JOIN insurance_company_email ice ON ice.id = ic.""insuranceCompanyEmailId"" 
+                  JOIN insurance_company ic2 ON ic2.id = ice.""insuranceCompanyId"" 
+                  JOIN errand_status es ON es.id = er.""statusId"" 
+                  WHERE {COND}
                   ORDER BY er.""createdAt"" DESC","SELECT  
                       er.id AS ""errandId"" ,
                       e.id AS ""emailId"",
@@ -246,8 +244,7 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                   INNER JOIN email e ON e.""errandId"" = er.id
                   INNER JOIN email_category_request ecr ON ecr.""emailId"" = e.id
                   WHERE e.folder = 'inbox'
-                    AND {COND1}
-                    AND {COND2}
+                    AND {COND}
                   ORDER BY er.""createdAt"" DESC","SELECT  
                         er.id AS ""errandId"" ,
                         cm.id AS ""chatMessageId"" ,
@@ -255,14 +252,18 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                         cm.""createdAt"" AS ""chatTime"" ,
                         au.""firstName"" AS ""chatDRP"" ,
                         cm.message ,
-                        cm.""fromClinicUserId"" AS ""chatClinic"" ,
-                        cm.""fromInsuranceCompanyId"" AS ""chatIC"" 
+                        --cm.""fromClinicUserId"" AS ""chatClinic"" ,
+                        clinic.""name"" AS ""chatClinic"" ,
+                        --cm.""fromInsuranceCompanyId"" AS ""chatFB"" ,
+                      	fb.""name"" AS ""chatFB""
                     FROM errand er  
                     INNER JOIN chat c ON c.""errandId"" = er.id
                     INNER JOIN chat_message cm ON cm.""chatId"" = c.id
+                    LEFT JOIN clinic_user cu  ON cu.id = cm.""fromClinicUserId"" 
+                    LEFT JOIN clinic ON clinic.id = cu.""clinicId"" 
+                    LEFT JOIN insurance_company fb ON fb.id = cm.""fromInsuranceCompanyId"" 
                     LEFT JOIN admin_user au ON cm.""fromAdminUserId"" = au.id
-                    WHERE {COND1}
-                      AND {COND2}
+                    WHERE {COND}
                     ORDER BY er.""createdAt"" DESC","SELECT  
                         er.id AS ""errandId"" ,
                         cr.""commentId"" ,
@@ -274,9 +275,20 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                     INNER JOIN comment_relation cr ON cr.""errandId"" = er.id
                     INNER JOIN ""comment"" c2 ON c2.id = cr.""commentId"" 
                     LEFT JOIN admin_user au2 ON c2.""createdByAdminId"" = au2.id
-                    WHERE {COND1}
-                      AND {COND2}
+                    WHERE {COND}
                     ORDER BY er.""createdAt"" DESC","SELECT  
+                                t.""errandId"" ,
+                                t.id AS ""transactionId"" ,
+                                t.""createdAt"" AS ""transTime"" ,
+                                ROUND(tl.amount / 100, 2) AS ""invoiceAmount"" 
+                            FROM ""transaction"" t 
+                            JOIN errand er on er.id = t.""errandId""
+                            JOIN transaction_line tl ON tl.""transactionId"" = t.id
+                            JOIN account a on tl.""accountId"" = a.id
+                            WHERE t.type_ = 'original_invoice'
+                                AND a.""ownerType"" = 'animal_owner'
+                                AND er.id = 73060
+                            ORDER BY er.""createdAt"" DESC;","SELECT  
                           t.""errandId"" ,
                           t.id AS ""transactionId"" ,
                           t.""createdAt"" AS ""transTime"" ,
@@ -291,8 +303,7 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                                   FROM swedbank_pay_order sp) AS spo ON spo.id = t.""swedbankPayOrderId""
                       WHERE t.type_ = 'customer_invoice'
                         AND t.""paymentOption"" = 'swedbankPay'
-                        AND {COND1}
-                        AND {COND2}
+                        AND {COND}
                       ORDER BY er.""createdAt"" DESC","SELECT  
                           t.""errandId"" ,
                           t.id AS ""transactionId"" ,
@@ -308,8 +319,7 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                                   FROM fortus_order fo) AS f ON f.id = t.""fortusOrderId""
                       WHERE t.type_ = 'customer_invoice'
                         AND t.""paymentOption"" = 'fortus'
-                        AND {COND1}
-                        AND {COND2}
+                        AND {COND}
                       ORDER BY er.""createdAt"" DESC","SELECT  
                           t.""errandId"" ,
                           t.id AS ""transactionId"" ,
@@ -329,8 +339,7 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                                     WHERE a.""ownerType"" = 'animal_owner') AS ka ON ka.""id"" = t.""customerPaymentId""
                       WHERE t.type_ = 'customer_invoice'
                         AND t.""paymentOption"" not in ('fortus','swedbankPay')
-                        AND {COND1}
-                        AND {COND2}
+                        AND {COND}
                       ORDER BY er.""createdAt"" DESC","SELECT 
                         t.""errandId"" ,
                         t.id AS ""transactionId"" ,
@@ -343,8 +352,7 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                     INNER JOIN ""transaction"" t ON tl.""transactionId"" = t.id
                     INNER JOIN errand er on er.id = t.""errandId""
                     INNER JOIN errand_status es ON es.id = er.""statusId"" 
-                    WHERE {COND1}
-                      AND {COND2}
+                    WHERE {COND}
                     ORDER BY er.""createdAt"" DESC"," SELECT
                         t.""errandId"" ,
                         t.id AS ""transactionId"" ,
@@ -354,8 +362,7 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                     INNER JOIN errand_status es ON es.id = er.""statusId"" 
                     WHERE t.type_ = 'cancel'
                       AND es.cancelled IS TRUE
-                      AND {COND1}
-                      AND {COND2}
+                      AND {COND}
                     ORDER BY er.""createdAt"" DESC "," SELECT
                               t.""errandId"" ,
                               t.id AS ""transactionId"" ,
@@ -363,8 +370,7 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                           FROM ""transaction""  t
                           INNER JOIN errand er ON er.id = t.""errandId"" 
                           WHERE t.type_ = 'remove_cancel'
-                            AND {COND1}
-                            AND {COND2}
+                            AND {COND}
                           ORDER BY er.""createdAt"" DESC "," SELECT id, email, ""firstName""
                 FROM admin_user au
                 WHERE {COND}; "," SELECT DISTINCT 

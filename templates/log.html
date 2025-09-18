@@ -17,9 +17,15 @@
    <div class="ban">
       <h3>{{ title or "Kronologiska Loggar" }}</h3>
       <form class="float-title" method="POST" enctype="multipart/form-data">
-          <label for="errandNumber">Ärende Nummer:</label>
-          <input type="text" name="errandNumber" id="errandNumber" placeholder="Ange Ärende Nummer" value="{{ errandNumber or '' }}" required>
-          <input type="submit" value="Skicka">
+          <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
+              <div>
+                  <label for="errand_number">Ärende Nummer:</label>
+                  <input type="text" name="errand_number" id="errand_number" placeholder="Ange Ärende Nummer" value="{{ errand_number or '' }}" required>
+              </div>
+              <div>
+                  <input type="submit" value="Skicka">
+              </div>
+          </div>
       </form>
     </div>
 
@@ -61,6 +67,7 @@
     </div>
     {% endif %}
 
-    <a href="/dashboard" class="back-button">⬅️ Dashboard</a> 
+    <a href="/dashboard" class="back-button">⬅️ Dashboard</a>
+
 </body>
 </html>
