@@ -114,16 +114,39 @@ class EmailDataset:
     def do_connect(self) -> pd.DataFrame:
         """Categorize emails and connect them with errands."""
         try:
+            print("🔍 do_connect: Step 1 - Running preprocessing")
             self.df = self.do_preprocess()
+            print("✅ do_connect: Preprocessing completed")
+
+            print("🔍 do_connect: Step 2 - Initializing columns")
             self.df = self.classifier.initialize_columns(self.df)
+            print("✅ do_connect: Columns initialized")
+
+            print("🔍 do_connect: Step 3 - Extracting numbers from attachments")
             self.df = self.extractor.extract_numbers_from_attach(self.df)
+            print("✅ do_connect: Attachment extraction completed")
+
+            print("🔍 do_connect: Step 4 - Extracting numbers from emails")
             self.df = self.extractor.extract_numbers_from_email(self.df)
+            print("✅ do_connect: Email extraction completed")
+
+            print("🔍 do_connect: Step 5 - Categorizing emails")
             self.df = self.classifier.categorize_emails(self.df)
+            print("✅ do_connect: Email categorization completed")
+
+            print("🔍 do_connect: Step 6 - Connecting with time windows")
             self.df = self.connector.connect_with_time_windows(self.df)
+            print("✅ do_connect: Time window connection completed")
+
+            print("🔍 do_connect: Step 7 - Refining and finalizing")
             self.df = self.classifier.refine_finalize(self.df)
-            
+            print("✅ do_connect: Refinement completed")
+
             return self.df
-            
+
         except Exception as e:
+            print(f"❌ do_connect: Error occurred - {str(e)}")
+            import traceback
+            print(f"📍 Traceback: {traceback.format_exc()}")
             raise e
 

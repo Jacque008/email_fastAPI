@@ -8,7 +8,7 @@ import os
 from ..services.utils import fetchFromDB
 
 # Configuration
-JWT_SECRET = os.getenv("JWT_SECRET") or "fallback-secret-key"
+JWT_SECRET = os.getenv("JWT_SECRET_FASTAPI") or "fallback-secret-key"
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 1  # Changed to 1 hour
 SESSION_EXPIRATION_HOURS = 1  # Session also expires after 1 hour

@@ -802,7 +802,7 @@ queryDict = {
                               AND cu.email NOT ILIKE '%@apoex.se'
                             ORDER BY "clinicId";'''],
   }
-make_df(queryDict, "queries") 
+# make_df(queryDict, "queries") 
 
 #  ****************  2_1_3. Category Regex  ****************
 category = [ 

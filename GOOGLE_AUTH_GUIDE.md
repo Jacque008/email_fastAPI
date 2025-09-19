@@ -19,7 +19,7 @@
 3. 启用 Google+ API 和 Google OAuth2 API
 4. 创建 OAuth 2.0 客户端 ID：
    - 应用类型：Web 应用
-   - 授权重定向 URI：`http://localhost:8000/auth/google/callback`
+   - 授权重定向 URI：`http://localhost:5000/auth/google/callback`
    - 获取客户端 ID 和客户端密钥
 
 ### 2. 环境变量配置
@@ -30,7 +30,7 @@
 # Google OAuth 配置
 GOOGLE_CLIENT_ID=你的客户端ID.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=你的客户端密钥
-GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
+GOOGLE_REDIRECT_URI=http://localhost:5000/auth/google/callback
 
 # 安全密钥（生产环境请使用强密码）
 SECRET_KEY=你的会话密钥
@@ -80,7 +80,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ### 1. 网页登录流程
 
-1. 访问 `http://localhost:8000/login`
+1. 访问 `http://localhost:5000/login`
 2. 点击 "Sign in with Google"
 3. 在 Google 页面完成认证
 4. 自动重定向回应用并获得 JWT token
@@ -91,7 +91,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ```bash
 # 登录后获取 token
-curl -X GET "http://localhost:8000/me" \
+curl -X GET "http://localhost:5000/me" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
@@ -109,7 +109,7 @@ fetch('/me', {
 
 ```bash
 # 处理邮件（需要认证）
-curl -X POST "http://localhost:8000/emails/process" \
+curl -X POST "http://localhost:5000/emails/process" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '[

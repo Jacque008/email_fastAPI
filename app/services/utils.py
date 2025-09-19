@@ -93,13 +93,15 @@ def fetchFromDB(query):
         data = get_data_from_local_engine(db_user, db_password, db_host, db_port, db_name, query)
     elif os.getenv("ENV_MODE") in ['test','production']:
         db_password = os.getenv('DB_PASSWORD')
-        # data = get_data_from_cloud_engine(db_user, db_password, db_name, query)
-        
+        data = get_data_from_cloud_engine(db_user, db_password, db_name, query)
+    else:
+        raise ValueError(f"Unsupported ENV_MODE: {os.getenv('ENV_MODE')}")
+
     return data
 
 def readGoogleSheet(url, worksheet, useCols=None):
     if os.getenv('ENV_MODE') == 'local':
-        service_account_file = "other/pw/drp-system-73cd3f0ca038.json"
+        service_account_file = "data/other/drp-system-73cd3f0ca038.json"
     elif os.getenv('ENV_MODE') in ['test', 'production']:
         service_account_file = "/SERVICE_ACCOUNT_JIE/SERVICE_ACCOUNT_JIE" 
         
@@ -122,9 +124,12 @@ def parse_email_address(emails_adds: str)-> List[str]:
     """
     if not isinstance(emails_adds, str):
         return []
-    
+
     email_pattern = r'[a-zåöä0-9._%+-]+@[a-zåöä0-9.-]+\.[a-zåöä]{2,}'
     add_str = ','.join(emails_adds) if isinstance(emails_adds, list) else (emails_adds or "")
+    # Handle None or empty add_str safely
+    if not add_str:
+        return []
     return reg.findall(email_pattern, add_str.lower())
 
 def extract_first_address(emails_adds):
@@ -163,6 +168,10 @@ def parse_to_column(df, col='to', new_col='parsedTo'):
     return exploded
  
 def base_match(text: str, patterns: List[str]) -> Optional[str]:
+    # Handle None or empty text safely
+    if not text:
+        return None
+
     for p in map(lambda r: reg.compile(r, reg.DOTALL|reg.MULTILINE), patterns):
         matched = p.search(text)
         if matched:
@@ -266,14 +275,22 @@ def as_id_list(v):
         return [v]
     
 def find_trunc_pos(text, trunc_reg_list):
+    # Handle None or empty text safely
+    if not text:
+        return 0
+
     stop = len(text)
     for patt in map(lambda r: reg.compile(r, reg.DOTALL | reg.MULTILINE), trunc_reg_list):
-        matched = reg.search(patt, text)
+        matched = patt.search(text)
         if matched and 0 <= matched.start() < stop:
             stop = matched.start()
     return stop
      
 def truncate_text(text, trunc_reg_list):
+    # Handle None or empty text safely
+    if not text:
+        return ""
+
     subject = text.split('[BODY]', 1)[0]
     subject_len = len(subject + '[BODY]')
     pos1 = find_trunc_pos(text, trunc_reg_list)

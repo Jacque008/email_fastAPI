@@ -15,10 +15,24 @@ class SummaryService(BaseService):
         self.services = DefaultServices()
         self.processor = self.services.get_processor()
         
-        self.summary_chat_query = self.queries['summaryChat'].iloc[0]
-        self.summary_email_query = self.queries['summaryEmail'].iloc[0] 
-        self.summary_comment_query = self.queries['summaryComment'].iloc[0]
-        self.model = pd.read_csv(f"{self.folder}/model.csv")['model'].iloc[0]
+        # Handle missing queries gracefully
+        try:
+            self.summary_chat_query = self.queries['summaryChat'].iloc[0] if 'summaryChat' in self.queries.columns and not self.queries.empty else ""
+            self.summary_email_query = self.queries['summaryEmail'].iloc[0] if 'summaryEmail' in self.queries.columns and not self.queries.empty else ""
+            self.summary_comment_query = self.queries['summaryComment'].iloc[0] if 'summaryComment' in self.queries.columns and not self.queries.empty else ""
+        except Exception as e:
+            print(f"Warning: Summary queries not available: {e}")
+            self.summary_chat_query = ""
+            self.summary_email_query = ""
+            self.summary_comment_query = ""
+
+        # Handle missing model gracefully
+        try:
+            model_df = pd.read_csv(f"{self.folder}/model.csv")
+            self.model = model_df['model'].iloc[0] if not model_df.empty and 'model' in model_df.columns else "deepseek-r1-distill-llama-70b"
+        except Exception as e:
+            print(f"❌ Error loading model.csv: {e}")
+            self.model = "deepseek-r1-distill-llama-70b"
         self.system_prompt = {
             "role": "system",
             "content": (

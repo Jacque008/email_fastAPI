@@ -7,7 +7,12 @@ from .processor import Processor
 class Connector(Processor):
     def __init__(self) -> None:
         super().__init__()
-        self.errand_connect_query = self.queries['errandConnect'].iloc[0]
+        # Handle missing errand connect query gracefully
+        try:
+            self.errand_connect_query = self.queries['errandConnect'].iloc[0] if 'errandConnect' in self.queries.columns and not self.queries.empty else ""
+        except Exception as e:
+            print(f"Warning: errandConnect query not available: {e}")
+            self.errand_connect_query = ""
         self.errand_query_condition = [
             "er.\"createdAt\" >= NOW() - INTERVAL '15 day'",
             #  AND ic.\"reference\" in ('1000724490')

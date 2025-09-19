@@ -7,8 +7,17 @@ from typing import Optional
 class Classifier(BaseService):    
     def __init__(self):
         super().__init__()
-        self.info_query = self.queries['info'].iloc[0]
-        self.category_reg_list = pd.read_csv(f"{self.folder}/categoryReg.csv")
+        # Handle missing info query gracefully
+        try:
+            self.info_query = self.queries['info'].iloc[0] if 'info' in self.queries.columns and not self.queries.empty else ""
+        except Exception as e:
+            print(f"Warning: info query not available: {e}")
+            self.info_query = ""
+        try:
+            self.category_reg_list = pd.read_csv(f"{self.folder}/categoryReg.csv")
+        except Exception as e:
+            print(f"❌ Error loading categoryReg.csv: {e}")
+            self.category_reg_list = pd.DataFrame(columns=['category', 'regex'])
         self.category_list = self.category_reg_list['category'].unique().tolist()
         self.category_patterns = {category: reg.compile('|'.join(f"(?:{p})" for p in regs.dropna() if str(p)), reg.IGNORECASE)
                                     for category, regs in self.category_reg_list.groupby('category')['regex']
@@ -16,7 +25,11 @@ class Classifier(BaseService):
                                 }
     
     def initialize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
-        number_cols = self.number_reg_list['number'].unique()
+        # Handle missing number column gracefully
+        if 'number' in self.number_reg_list.columns and not self.number_reg_list.empty:
+            number_cols = self.number_reg_list['number'].unique()
+        else:
+            number_cols = []
         amount_cols = {'settlementAmount', 'attach_settlementAmount','totalAmount', 'attach_totalAmount','folksamOtherAmount'}
         name_cols = {'animalName', 'attach_animalName', 'animalName_Sveland','ownerName', 'attach_ownerName', 'insuranceCompanyReference'}
         id_string_cols = {'reference', 'insuranceNumber', 'damageNumber','insuranceCaseRef'}
@@ -67,7 +80,7 @@ class Classifier(BaseService):
         return df
     
     def identify_first_info(self, infoDate, subject: str) -> str:
-        safe_subject = subject.replace("'", "''")
+        safe_subject = (subject or "").replace("'", "''")
         condition = (f"""ecr."timestamp" >= ('{infoDate}'::timestamptz) - INTERVAL '5 minutes'
                         AND ecr."timestamp" < '{infoDate}'::timestamptz
                         AND e.subject = '{safe_subject}'""" )
@@ -150,8 +163,12 @@ class Classifier(BaseService):
                 continue
             pattern = self.category_patterns.get(category)
 
+            # Skip if pattern is None or empty
+            if not pattern:
+                continue
+
             text = df['email'].astype(str)
-            mask_regex = text.map(lambda s: bool(pattern.search(s)))
+            mask_regex = text.map(lambda s: bool(pattern.search(s)) if s else False)
             combined_mask = unassigned_mask & rule['mask'] & mask_regex.fillna(False)
             
             df.loc[combined_mask, 'category'] = category
@@ -168,8 +185,13 @@ class Classifier(BaseService):
         for category in remaining_categories:
             if category in self.category_patterns:
                 pattern = self.category_patterns[category]
+
+                # Skip if pattern is None or empty
+                if not pattern:
+                    continue
+
                 text = df['email'].astype(str)
-                mask_regex = text.map(lambda s: bool(pattern.search(s)))
+                mask_regex = text.map(lambda s: bool(pattern.search(s)) if s else False)
                 mask = unassigned_mask & mask_regex.fillna(False)
                 df.loc[mask, 'category'] = category
                 unassigned_mask = df['category'].isna()

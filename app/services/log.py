@@ -23,17 +23,32 @@ class LogService(BaseService):
         """Setup query conditions and reload queries with new parameters"""
         self.cond = f"er.\"reference\" = '{errand_number}'"
 
-        self.log_base_query = (self.queries['logBase'].iloc[0]).format(COND=self.cond)
-        self.log_email_query = (self.queries['logEmail'].iloc[0]).format(COND=self.cond)
-        self.log_chat_query = (self.queries['logChat'].iloc[0]).format(COND=self.cond)
-        self.log_comment_query = (self.queries['logComment'].iloc[0]).format(COND=self.cond)
-        self.log_original_invoice_query = (self.queries['logOriginalInvoice'].iloc[0]).format(COND=self.cond)
-        self.log_invoice_sp_query = (self.queries['logInvoiceSP'].iloc[0]).format(COND=self.cond)
-        self.log_invoice_fo_query = (self.queries['logInvoiceFO'].iloc[0]).format(COND=self.cond)
-        self.log_invoice_ka_query = (self.queries['logInvoiceKA'].iloc[0]).format(COND=self.cond)
-        self.log_receive_query = (self.queries['logReceive'].iloc[0])
-        self.log_cancel_query = (self.queries['logCancel'].iloc[0]).format(COND=self.cond)
-        self.log_remove_cancel_query = (self.queries['logRemoveCancel'].iloc[0]).format(COND=self.cond)
+        # Handle missing queries gracefully
+        try:
+            self.log_base_query = (self.queries['logBase'].iloc[0]).format(COND=self.cond) if 'logBase' in self.queries.columns and not self.queries.empty else ""
+            self.log_email_query = (self.queries['logEmail'].iloc[0]).format(COND=self.cond) if 'logEmail' in self.queries.columns and not self.queries.empty else ""
+            self.log_chat_query = (self.queries['logChat'].iloc[0]).format(COND=self.cond) if 'logChat' in self.queries.columns and not self.queries.empty else ""
+            self.log_comment_query = (self.queries['logComment'].iloc[0]).format(COND=self.cond) if 'logComment' in self.queries.columns and not self.queries.empty else ""
+            self.log_original_invoice_query = (self.queries['logOriginalInvoice'].iloc[0]).format(COND=self.cond) if 'logOriginalInvoice' in self.queries.columns and not self.queries.empty else ""
+            self.log_invoice_sp_query = (self.queries['logInvoiceSP'].iloc[0]).format(COND=self.cond) if 'logInvoiceSP' in self.queries.columns and not self.queries.empty else ""
+            self.log_invoice_fo_query = (self.queries['logInvoiceFO'].iloc[0]).format(COND=self.cond) if 'logInvoiceFO' in self.queries.columns and not self.queries.empty else ""
+            self.log_invoice_ka_query = (self.queries['logInvoiceKA'].iloc[0]).format(COND=self.cond) if 'logInvoiceKA' in self.queries.columns and not self.queries.empty else ""
+            self.log_receive_query = (self.queries['logReceive'].iloc[0]) if 'logReceive' in self.queries.columns and not self.queries.empty else ""
+            self.log_cancel_query = (self.queries['logCancel'].iloc[0]).format(COND=self.cond) if 'logCancel' in self.queries.columns and not self.queries.empty else ""
+            self.log_remove_cancel_query = (self.queries['logRemoveCancel'].iloc[0]).format(COND=self.cond) if 'logRemoveCancel' in self.queries.columns and not self.queries.empty else ""
+        except Exception as e:
+            print(f"Warning: Log queries not available, using defaults: {e}")
+            self.log_base_query = ""
+            self.log_email_query = ""
+            self.log_chat_query = ""
+            self.log_comment_query = ""
+            self.log_original_invoice_query = ""
+            self.log_invoice_sp_query = ""
+            self.log_invoice_fo_query = ""
+            self.log_invoice_ka_query = ""
+            self.log_receive_query = ""
+            self.log_cancel_query = ""
+            self.log_remove_cancel_query = ""
         self.groq_client = get_groq_client()
         self.model = self.model_df['model'].iloc[0] if not self.model_df.empty else "deepseek-r1-distill-llama-70b"
     

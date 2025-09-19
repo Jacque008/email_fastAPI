@@ -37,17 +37,19 @@ class Parser(BaseService):
         flag_dr_sa = captured_fb = fw_adds = None
 
         for patt in fw_patts:
-            if patt.search(text):
+            if text and patt.search(text):
                 flag_dr_sa = base_match(text, self.clinic_complete_type)
                 if source == 'Clinic':
                     matches = []
                     for adds_reg in fw_adds_reg_list:
-                        for m in reg.findall(adds_reg, text):
-                            if '@' in m and any(fb in m for fb in self.fb_ref_list):
-                                matches.append(m)
+                        # Handle None text safely
+                        if text:
+                            for m in reg.findall(adds_reg, text):
+                                if '@' in m and any(fb in m for fb in self.fb_ref_list):
+                                    matches.append(m)
                     if matches:
                         fw_adds = extract_first_address(matches)
-                        if fw_adds.lower() != 'mail@direktregleringsportalen.se':
+                        if fw_adds and fw_adds.lower() != 'mail@direktregleringsportalen.se':
                             for fb in self.fb_ref_list:
                                 if (fb == 'if' and ('if.' in fw_adds or reg.search(r'\bif@', fw_adds) or 'If Skadeförsäkring' in fw_adds)) or fb in fw_adds: 
                                     captured_fb = fb.capitalize()
@@ -74,11 +76,11 @@ class Parser(BaseService):
                 if mClinic: sender = mClinic
             # receiver logic
             mapping = [
-               (lambda t: 'If', lambda t: 'If Skadeförsäkring' in t or reg.search(r'KD\d*-\d*-?\d*', t)),
-               (lambda t: 'Folksam', lambda t: reg.search(r'och FF\d+S|CV-?\d*-?\d*', t)),
-               (lambda t: 'Lassie', lambda t: reg.search(r'VOFF-?\w*-?\d*', t)),
-               (lambda t: 'Svedea', lambda t: reg.search(r'HU\d{2}-|försäkringsnummer \d+', t)),
-               (lambda t: None, lambda t: base_match(t, self.receiver_provetcloud_reg) is not None),
+               (lambda t: 'If', lambda t: t and ('If Skadeförsäkring' in t or reg.search(r'KD\d*-\d*-?\d*', t))),
+               (lambda t: 'Folksam', lambda t: t and reg.search(r'och FF\d+S|CV-?\d*-?\d*', t)),
+               (lambda t: 'Lassie', lambda t: t and reg.search(r'VOFF-?\w*-?\d*', t)),
+               (lambda t: 'Svedea', lambda t: t and reg.search(r'HU\d{2}-|försäkringsnummer \d+', t)),
+               (lambda t: None, lambda t: t and base_match(t, self.receiver_provetcloud_reg) is not None),
             ]
             for func, cond in mapping:
                 if cond(text):

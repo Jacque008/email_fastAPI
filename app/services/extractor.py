@@ -40,16 +40,24 @@ class Extractor(Processor):
         name_cols = ['animalName', 'attach_animalName', 'animalName_Sveland', 'ownerName', 'attach_ownerName']
         
         if col_group in name_cols:
+            # Handle None/empty matched_value safely
+            if not matched_value:
+                return None
             matched_value = reg.sub(r'\(Hund\)|\(hund\)|\(Katt\)|\(katt\)', '', matched_value)
             matched_value = reg.sub(r'[,._\-()/*\s]+', ' ', matched_value)
             matched_value = reg.sub(r'[^a-zA-ZåäöÅÄÖ\'"´ ]', '', matched_value).strip()
             return matched_value or None
             
         elif col_group in amount_cols:
+            if not matched_value:
+                return pd.NA
             cleaned_val = matched_value.replace(',00', '').replace('.', '').replace(',', '').replace(' ', '')
             return pd.to_numeric(cleaned_val, errors='coerce')
             
         else:
+            # Handle None/empty matched_value safely
+            if not matched_value:
+                return None
             return reg.sub(r'\n', '', matched_value).strip()
 
 

@@ -19,7 +19,11 @@ class Processor(BaseService):
 
     
     def clean_email_text(self, text):
+        # Handle None or empty text safely
         text = html.unescape(text or "")
+        if not text:
+            return ""
+
         text = reg.sub(r'</p\s*>', '</p>\n', text, flags=reg.IGNORECASE)
         text = reg.sub(r'<[^>]+>', '', text)
 

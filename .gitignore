@@ -219,8 +219,11 @@ data/other
 data/other/*.json
 data/test_data
 data/test_data/*.json
+
 # secrets
 .env
 *.env
 .env.*
+.claude
+.vscode/
 

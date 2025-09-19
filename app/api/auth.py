@@ -50,6 +50,9 @@ async def google_auth(request: Request):
         raise HTTPException(status_code=500, detail="Google OAuth is not configured")
 
     redirect_uri = os.getenv("GOOGLE_REDIRECT_URI") or request.url_for("google_callback")
+    # For local development, ensure consistent URL
+    if os.getenv("ENV_MODE") == "local" and "127.0.0.1:5000" in str(redirect_uri):
+        redirect_uri = "http://127.0.0.1:5000/auth/google/callback"
     state = os.urandom(32).hex()
 
     # Set OAuth state

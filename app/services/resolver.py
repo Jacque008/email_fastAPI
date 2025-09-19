@@ -172,19 +172,21 @@ class ReceiverResolver(BaseService):
         flag_de_sa = captured_fb = None
 
         for patt in fw_patts:
-            if patt.search(origin):
+            if origin and patt.search(origin):
                 flag_de_sa = base_match(origin, self.clinic_complete_type)
                 if source == 'Clinic':
                     matches = []
                     for tmpl in fw_add_regs:
-                        for m in reg.findall(tmpl, origin):
-                            if '@' in m and any(ic in m for ic in self.fb_ref_list):
-                                matches.append(m)
+                        # Handle None origin safely
+                        if origin:
+                            for m in reg.findall(tmpl, origin):
+                                if '@' in m and any(ic in m for ic in self.fb_ref_list):
+                                    matches.append(m)
                     if matches:
                         fw_add = base_match(matches[0], [r'(.*)']) or matches[0]
-                        if fw_add.lower() != 'mail@direktregleringsportalen.se':
+                        if fw_add and fw_add.lower() != 'mail@direktregleringsportalen.se':
                             for ic in self.fb_ref_list:
-                                if (ic == 'if' and ('if.' in fw_add or reg.search(r'\bif@', fw_add))) or (ic in fw_add):
+                                if fw_add and ((ic == 'if' and ('if.' in fw_add or reg.search(r'\bif@', fw_add))) or (ic in fw_add)):
                                     captured_fb = ic.capitalize()
                                     if ic in ['wisentic','djurskador@djurskador.se']:
                                         captured_fb = 'Wisentic'

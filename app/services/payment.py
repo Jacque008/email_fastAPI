@@ -11,10 +11,21 @@ class PaymentService(BaseService):
     
     def __init__(self):
         super().__init__()
-        self.info_reg = pd.read_csv(f"{self.folder}/infoReg.csv")
-        self.info_item_list = self.info_reg.item.to_list()
-        self.bank_map = pd.read_csv(f"{self.folder}/bankMap.csv")
-        self.bank_dict = self.bank_map.set_index('bankName')['insuranceCompanyReference'].to_dict()
+        try:
+            self.info_reg = pd.read_csv(f"{self.folder}/infoReg.csv")
+            self.info_item_list = self.info_reg.item.to_list() if not self.info_reg.empty and 'item' in self.info_reg.columns else []
+        except Exception as e:
+            print(f"❌ Error loading infoReg.csv: {e}")
+            self.info_reg = pd.DataFrame(columns=['item', 'regex'])
+            self.info_item_list = []
+
+        try:
+            self.bank_map = pd.read_csv(f"{self.folder}/bankMap.csv")
+            self.bank_dict = self.bank_map.set_index('bankName')['insuranceCompanyReference'].to_dict() if not self.bank_map.empty else {}
+        except Exception as e:
+            print(f"❌ Error loading bankMap.csv: {e}")
+            self.bank_map = pd.DataFrame(columns=['bankName', 'insuranceCompanyReference'])
+            self.bank_dict = {}
         self.payout_entity = get_payoutEntity()
         self.matching_cols_pay = ['extractReference','extractOtherNumber','extractDamageNumber']
         self.matching_cols_errand = ['isReference','damageNumber','invoiceReference','ocrNumber']
@@ -121,7 +132,11 @@ class PaymentService(BaseService):
                 if compiled_pattern is None:
                     continue
                     
-                match = compiled_pattern.search(row_pay['info'])
+                # Handle None info safely
+                info_text = row_pay['info']
+                if not info_text:
+                    continue
+                match = compiled_pattern.search(info_text)
                 if match:
                     matched_value = match.group(1).strip()
                     if col not in row_pay or pd.isna(row_pay.get(col)):

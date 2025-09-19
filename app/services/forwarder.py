@@ -27,7 +27,11 @@ class Forwarder(BaseService):
             self.fw_cates = [item.replace('_Template', '') for item in fw_cates]
             self.trun_list = self.forward_suggestion[self.forward_suggestion['action']=='Trim'].templates.to_list()
             self.sub_list = self.forward_suggestion[self.forward_suggestion['action']=='Subject'].templates.to_list()
-            self.forward_format = pd.read_csv(f"{self.folder}/forwardFormat.csv")
+            try:
+                self.forward_format = pd.read_csv(f"{self.folder}/forwardFormat.csv")
+            except Exception as e:
+                print(f"❌ Error loading forwardFormat.csv: {e}")
+                self.forward_format = pd.DataFrame(columns=['oldText', 'newText'])
             self.request_fw_sub = self.forward_suggestion[self.forward_suggestion['action']=='Forward_Subject'].templates.to_list()
         except Exception as e:
             self.forward_format = pd.DataFrame()
@@ -115,14 +119,17 @@ class Forwarder(BaseService):
 
     def _handel_colon(self, text: str) -> str:
         """Handle colon formatting"""
+        if not text:
+            return ""
+
         key_words = [
-            'Ägarens namn.', 'Djurägare:', 'Ägarens namn:', 'Djurägarens namn:', 
-            'Ägare:', 'Djur:', 'Djurets namn:', 'Referensnummer:', 'Journalnummer:', 
+            'Ägarens namn.', 'Djurägare:', 'Ägarens namn:', 'Djurägarens namn:',
+            'Ägare:', 'Djur:', 'Djurets namn:', 'Referensnummer:', 'Journalnummer:',
             'Djurförsäkring:', 'Klinik:', 'Försäkringsnummer:', 'Betalningsreferens 1000',
-            'Namn:', 'Djurslag:', 'Journalnr/kundnr:', 'Direktregleringsnr/journalnr:', 
+            'Namn:', 'Djurslag:', 'Journalnr/kundnr:', 'Direktregleringsnr/journalnr:',
             'Skadenummer:', 'Patientnummer/journalnummer/kundnummer:', 'Svelands skadenummer:'
         ]
-        
+
         sentences = text.split("\n")
         
         for i in range(len(sentences) - 1):
@@ -141,13 +148,17 @@ class Forwarder(BaseService):
 
     def _clean_beginning(self, text: str) -> str:
         """Clean email beginning"""
+        # Handle None or empty text safely
+        if not text:
+            return ""
+
         if reg.search(r'(\[SUBJECT\].*?Vårt ärende:\s*[\d ]+)', text, flags=reg.DOTALL | reg.IGNORECASE):
             text = reg.sub(r'(\[SUBJECT\].*?Vårt ärende:\s*[\d ]+)', '', text, flags=reg.DOTALL | reg.IGNORECASE)
         elif reg.search(r'(\[SUBJECT\].*?Hej)', text, flags=reg.DOTALL | reg.IGNORECASE):
             text = reg.sub(r'(\[SUBJECT\].*?Hej)', 'Hej', text, flags=reg.DOTALL | reg.IGNORECASE)
         else:
             text = reg.sub(r'(\[SUBJECT\].*?\[BODY\])', '', text, flags=reg.DOTALL | reg.IGNORECASE)
-        
+
         return text
 
     def _check_attachment(self, html: str, text: str) -> str:
@@ -270,9 +281,9 @@ class Forwarder(BaseService):
     
     def _format_forward_text(self, forward_text: str) -> str:
         """Format forward text with HTML and styling"""
-        if pd.isna(forward_text):
-            return forward_text
-        
+        if pd.isna(forward_text) or not forward_text:
+            return forward_text or ""
+
         try:
             text = forward_text.replace('<p>', '').replace('</p>', '').strip()
             text = reg.sub('\n', '<br><br>', text).strip()
@@ -286,7 +297,7 @@ class Forwarder(BaseService):
                 new_text = row['newText'] if pd.notna(row['newText']) else ''
                 if old_text:
                     text = reg.sub(old_text, new_text, text)
-            
+
             return text
         except Exception as e:
             return forward_text or ""

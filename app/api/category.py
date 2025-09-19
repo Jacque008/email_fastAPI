@@ -148,9 +148,17 @@ async def process_category_emails(
 @router.post("/category_api", response_model=List[EmailOut])
 async def category_api(emails: List[EmailIn]):
     try:
+        print("🔍 Step 1: Creating DataFrame from input emails")
         email_df = pd.DataFrame([e.model_dump(by_alias=True) for e in emails])
+        print(f"📊 DataFrame created with {len(email_df)} rows")
+
+        print("🔍 Step 2: Creating EmailDataset and DefaultServices")
         ds = EmailDataset(df=email_df, services=DefaultServices())
+        print("✅ EmailDataset and services initialized")
+
+        print("🔍 Step 3: Running do_connect processing pipeline")
         processed_df = ds.do_connect()
+        print("✅ Processing pipeline completed")
         
         # Use the same DataFrame processing as web interface
         cleaned_df = processed_df.copy()

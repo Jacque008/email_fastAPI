@@ -49,12 +49,12 @@ pip install -r requirements.txt
 3. Start the server:
 
 ```bash
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 5000
 ```
 
 4. Open docs:
-   - Swagger UI: http://127.0.0.1:8000/docs
-   - ReDoc: http://127.0.0.1:8000/redoc
+   - Swagger UI: http://127.0.0.1:5000/docs
+   - ReDoc: http://127.0.0.1:5000/redoc
 
 ## Notes
 

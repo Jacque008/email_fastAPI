@@ -35,7 +35,12 @@ class DefaultServices:
         
     def get_processor(self):
         if self._processor is None:
-            self._processor = Processor()
+            try:
+                self._processor = Processor()
+            except Exception as e:
+                print(f"Error creating Processor: {e}")
+                # Return a minimal processor to prevent crashes
+                self._processor = None
         return self._processor
     
     def get_parser(self):
