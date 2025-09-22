@@ -3,7 +3,7 @@ from fastapi import APIRouter, Request, HTTPException, status, Depends, Form
 from fastapi.templating import Jinja2Templates
 import os
 
-from ..schemas.summary import SummaryIn, SummaryOut
+from ..schemas.summary import SummaryIn, SummaryOutWeb, SummaryOutAPI
 from ..dataset.summary_dataset import SummaryDataset
 from ..core.auth import get_current_user
 
@@ -19,7 +19,7 @@ async def summary_page(request: Request, user=Depends(get_current_user)):
     """Summary page - GET"""
     return templates.TemplateResponse("summary.html", {"request": request})
 
-@router.post("/summary")
+@router.post("/summary", response_model=SummaryOutWeb)
 async def process_summary_request(
     request: Request,
     email_id: Optional[str] = Form(None),
@@ -39,30 +39,25 @@ async def process_summary_request(
                     "request": request,
                     "error": "Email ID must be a valid number"
                 })
-        
-        # Clean up string fields (convert empty strings to None)
+                
         errand_number_clean = errand_number.strip() if errand_number and errand_number.strip() else None
         reference_clean = reference.strip() if reference and reference.strip() else None
         
-        # Validate input - at least one parameter must be provided
         if not any([email_id_int, errand_number_clean, reference_clean]):
             return templates.TemplateResponse("summary.html", {
                 "request": request,
                 "error": "Please provide at least one identifier: Email ID, Errand Number, or Reference"
             })
-        
-        # Create summary request
+
         summary_request = SummaryIn(
             emailId=email_id_int,
             errandNumber=errand_number_clean,
             reference=reference_clean
         )
         
-        # Generate summary using webService mode for detailed results
         dataset = SummaryDataset()
         result = dataset.generate_summary(summary_request, use_case='webService')
-        
-        # Get statistics
+
         stats = dataset.get_summary_statistics(summary_request)
         
         # Convert result to dict for template
@@ -90,39 +85,20 @@ async def process_summary_request(
             "error": f"Summary generation failed: {str(e)}"
         })
 
-@router.post("/summary_api", response_model=Union[SummaryOut, List[SummaryOut]])
+@router.post("/summary_api", response_model=Union[SummaryOutAPI, List[SummaryOutAPI]])
 async def summary_api(
     summary_request: Union[SummaryIn, List[SummaryIn]],
     use_case: str = 'api'
-) -> Union[SummaryOut, List[SummaryOut]]:
+) -> Union[SummaryOutAPI, List[SummaryOutAPI]]:
     """
     API endpoint for generating summaries - accepts single object or array
-    
+
     Args:
         summary_request: SummaryIn object or List[SummaryIn] with emailId, errandNumber, or reference
         use_case: 'api' for combined summary only, 'webService' for detailed summaries
-        
+
     Returns:
-        SummaryOut object or List[SummaryOut] with appropriate summary fields
-        
-    Example API Usage:
-    Single object:
-    POST /summary_api
-    {
-        "emailId": 123456,
-        "errandNumber": null,
-        "reference": null
-    }
-    
-    Array of objects:
-    POST /summary_api
-    [
-        {
-            "emailId": 168623,
-            "errandNumber": null,
-            "reference": null
-        }
-    ]
+        SummaryOutAPI object or List[SummaryOutAPI] with only Summary_Combined_Info and Error_Combined_Info fields
     """
     try:
         dataset = SummaryDataset()
@@ -137,7 +113,8 @@ async def summary_api(
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                         detail=result.error_message
                     )
-                results.append(result)
+                api_result = dataset.convert_to_api_format(result)
+                results.append(api_result)
             return results
         else:
             # Single object
@@ -147,7 +124,7 @@ async def summary_api(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail=result.error_message
                 )
-            return result
+            return dataset.convert_to_api_format(result)
         
     except ValueError as e:
         raise HTTPException(
@@ -172,25 +149,6 @@ async def summary_statistics(
         
     Returns:
         Statistics about available data (single dict or list of dicts)
-        
-    Example API Usage:
-    Single object:
-    POST /summary_stats
-    {
-        "emailId": 168623,
-        "errandNumber": null,
-        "reference": null
-    }
-    
-    Array of objects:
-    POST /summary_stats
-    [
-        {
-            "emailId": 168623,
-            "errandNumber": null,
-            "reference": null
-        }
-    ]
     """
     try:
         dataset = SummaryDataset()

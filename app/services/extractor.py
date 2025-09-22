@@ -1,10 +1,10 @@
 import json
 import base64
-import fitz  
-import regex as reg 
+import fitz
+import regex as reg
 import pandas as pd
 from html import escape
-from bs4 import BeautifulSoup
+import inscriptis
 from typing import Dict, Any
 from .utils import base_match
 from .processor import Processor
@@ -135,27 +135,34 @@ class Extractor(Processor):
                 extracted_data[col_name] = matched_value
         return extracted_data
     
-    
+
     def extract_forward_attachments(self, html: str, text: str) -> str:
-        """Extract attachment links from HTML"""
+        """Extract attachment links from HTML using inscriptis"""
         if not html or not html.strip():
             return text
-        
+
         attachment_list = []
-        soup = BeautifulSoup(html, 'html.parser')
+
+        # Use regex to find attachment tables in the HTML before parsing
         pattern = r'(?:^|\s)(attachments|intercom-attachments)(?=\s|$)'
-        attachments_table = soup.find('table', class_=reg.compile(pattern))
-        
-        if attachments_table:
-            for a_tag in attachments_table.find_all('a', class_=reg.compile(r'(?:^|\s)intercom-attachment(?:\s|$)')):
-                href = a_tag.get('href', '')
-                filename = escape(a_tag.get_text(strip=True))
-                if href.startswith(('http://', 'https://')) and filename:
-                    attachment_list.append(f'<a href="{href}" target="_blank" rel="noopener">{filename}</a>')
-        
+        table_match = reg.search(rf'<table[^>]*class="[^"]*{pattern}[^"]*"[^>]*>(.*?)</table>', html, reg.DOTALL | reg.IGNORECASE)
+
+        if table_match:
+            table_html = table_match.group(0)
+
+            # Extract all anchor tags with intercom-attachment class
+            anchor_pattern = r'<a[^>]*class="[^"]*intercom-attachment[^"]*"[^>]*href="([^"]*)"[^>]*>([^<]*)</a>'
+            anchor_matches = reg.findall(anchor_pattern, table_html, reg.IGNORECASE)
+
+            for href, filename in anchor_matches:
+                # Clean filename using inscriptis for any nested HTML
+                clean_filename = inscriptis.get_text(filename).strip()
+                if href.startswith(('http://', 'https://')) and clean_filename:
+                    attachment_list.append(f'<a href="{href}" target="_blank" rel="noopener">{escape(clean_filename)}</a>')
+
         if attachment_list:
             return text + "\n[Attachment]: " + "\n".join(attachment_list)
-        
+
         return text
     
     

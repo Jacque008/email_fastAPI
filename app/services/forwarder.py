@@ -5,7 +5,7 @@ Extracted from workflow/create_forwarding.py
 import regex as reg
 import pandas as pd
 from typing import Dict
-from bs4 import BeautifulSoup
+import inscriptis
 from dataclasses import dataclass, field
 from html import escape
 from typing import List
@@ -27,12 +27,12 @@ class Forwarder(BaseService):
             self.fw_cates = [item.replace('_Template', '') for item in fw_cates]
             self.trun_list = self.forward_suggestion[self.forward_suggestion['action']=='Trim'].templates.to_list()
             self.sub_list = self.forward_suggestion[self.forward_suggestion['action']=='Subject'].templates.to_list()
-            self.forward_format = pd.read_csv(f"{self.folder}/forwardFormat.csv")
+            # Use cached forward_format instead of reading directly
+            # self.forward_format is already available from BaseService
             self.request_fw_sub = self.forward_suggestion[self.forward_suggestion['action']=='Forward_Subject'].templates.to_list()
         except Exception as e:
-            self.forward_format = pd.DataFrame()
+            pass
             
-
     def generate_forwarding_subject(self, email: str, category: str, **kwargs) -> str:
         """Generate forward subject based on email content and category"""
         try:
@@ -151,24 +151,30 @@ class Forwarder(BaseService):
         return text
 
     def _check_attachment(self, html: str, text: str) -> str:
-        """Check and process attachments from HTML content"""
+        """Check and process attachments from HTML content using inscriptis"""
         attachment_list = []
-        
-        try:
-            soup = BeautifulSoup(html, 'html.parser')
-            pattern = r'(?:^|\s)(attachments|intercom-attachments)(?=\s|$)'
-            attachments_table = soup.find('table', class_=reg.compile(pattern))
 
-            if attachments_table:
-                for a_tag in attachments_table.find_all('a', class_=reg.compile(r'(?:^|\s)intercom-attachment(?:\s|$)')):
-                    href = a_tag.get('href', '')
-                    filename = escape(a_tag.get_text(strip=True))
+        try:
+            # Use regex to find attachment tables in the HTML
+            pattern = r'(?:^|\s)(attachments|intercom-attachments)(?=\s|$)'
+            table_match = reg.search(rf'<table[^>]*class="[^"]*{pattern}[^"]*"[^>]*>(.*?)</table>', html, reg.DOTALL | reg.IGNORECASE)
+
+            if table_match:
+                table_html = table_match.group(0)
+
+                # Extract all anchor tags with intercom-attachment class
+                anchor_pattern = r'<a[^>]*class="[^"]*intercom-attachment[^"]*"[^>]*href="([^"]*)"[^>]*>([^<]*)</a>'
+                anchor_matches = reg.findall(anchor_pattern, table_html, reg.IGNORECASE)
+
+                for href, filename in anchor_matches:
                     if not href.startswith(('http://', 'https://')):
                         continue
-                    
-                    if filename:
-                        attachment_list.append(f'<a href="{href}" target="_blank" rel="noopener">{filename}</a>')
-            
+
+                    # Clean filename using inscriptis for any nested HTML
+                    clean_filename = inscriptis.get_text(filename).strip()
+                    if clean_filename:
+                        attachment_list.append(f'<a href="{href}" target="_blank" rel="noopener">{escape(clean_filename)}</a>')
+
             if attachment_list:
                 separator = "\n[Attachment]: "
                 return text + separator + "\n".join(attachment_list)

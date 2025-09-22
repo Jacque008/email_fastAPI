@@ -25,13 +25,14 @@ httpx==0.26.0
 
 # External integrations
 gspread==6.2.1  # Google Sheets integration - used in utils.py
-itsdangerous==2.2.0
 inscriptis==2.6.0
 pymupdf==1.26.4
-beautifulsoup4==4.13.5
 groq==0.31.0
-# Removed potentially unused packages:
 
+itsdangerous==2.2.0
+gcsfs==2024.10.0
+psutil==6.1.0
+# Removed potentially unused packages:
 # protobuf==3.20.1 - Protocol Buffers (not found in codebase)
 # Werkzeug==2.2.2 - WSGI utilities (not found in codebase)
 # itsdangerous==2.2.0 - Digital signatures (not found in codebase)

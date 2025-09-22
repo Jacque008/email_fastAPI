@@ -9,16 +9,13 @@ class SummaryService(BaseService):
     
     def __init__(self):
         super().__init__()
-        
-        # Initialize services and processor
-        from .services import DefaultServices
-        self.services = DefaultServices()
-        self.processor = self.services.get_processor()
-        
+
         self.summary_chat_query = self.queries['summaryChat'].iloc[0]
-        self.summary_email_query = self.queries['summaryEmail'].iloc[0] 
+        self.summary_email_query = self.queries['summaryEmail'].iloc[0]
         self.summary_comment_query = self.queries['summaryComment'].iloc[0]
-        self.model = pd.read_csv(f"{self.folder}/model.csv")['model'].iloc[0]
+        # Use cached model_df instead of reading CSV directly
+        self.model = self.model_df['model'].iloc[0]
+
         self.system_prompt = {
             "role": "system",
             "content": (
@@ -34,6 +31,14 @@ class SummaryService(BaseService):
                 "- 'DRP' (direktreglering company) acts as an intermediary platform connecting clinics and insurance companies. All communication between clinics and insurance companies occurs via the DRP platform. DRP is also responsible for forwarding emails and handling payments: insurance companies pay DRP, which deducts service fees before forwarding payments to clinics."
             )}
         self._groq_client = get_groq_client()
+
+    @property
+    def processor(self):
+        if not hasattr(self, '_processor'):
+            from .services import DefaultServices
+            services = DefaultServices()
+            self._processor = services.get_processor()
+        return self._processor
         
 
     
@@ -173,7 +178,9 @@ class SummaryService(BaseService):
         if not inbox.empty:
             try:
                 from ..dataset.email_dataset import EmailDataset
-                inbox_dataset = EmailDataset(df=inbox, services=self.services)
+                from .services import DefaultServices
+                services = DefaultServices()
+                inbox_dataset = EmailDataset(df=inbox, services=services)
                 processed_dataset = inbox_dataset.process_emails()
                 pro = processed_dataset.to_frame()
                 pro = pro.rename({'date':'createdAt'}, axis=1)
@@ -398,8 +405,6 @@ class SummaryService(BaseService):
     
     def get_ai_response(self, messages: List[Dict[str, str]]) -> Tuple[Optional[str], Optional[str]]:
         """Get AI response with error handling and response cleaning"""
-        # llama-3.3-70b-versatile
-        # deepseek-r1-distill-llama-70b
         if not messages:
             return None, "No messages to process"
             

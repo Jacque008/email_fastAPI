@@ -10,7 +10,6 @@ class Connector(Processor):
         self.errand_connect_query = self.queries['errandConnect'].iloc[0]
         self.errand_query_condition = [
             "er.\"createdAt\" >= NOW() - INTERVAL '15 day'",
-            #  AND ic.\"reference\" in ('1000724490')
             "er.\"createdAt\" >= NOW() - INTERVAL '3 month' AND er.\"createdAt\" < NOW() - INTERVAL '15 day'"
         ]
 
@@ -47,7 +46,7 @@ class Connector(Processor):
         if unmatched_mask.any():
             sub = df.loc[unmatched_mask].copy() 
             applied = sub.apply(lambda row: self._find_match_for_single_email(row, errands), axis=1)
-            applied = pd.DataFrame.from_records(applied, index=sub.index)
+            applied = pd.DataFrame.from_records(applied)  # type: ignore
             
             errand_matched = applied.get('errand_matched', pd.Series(False, index=applied.index))
             hit_mask = errand_matched.eq(True) if isinstance(errand_matched, pd.Series) else errand_matched == True
@@ -57,7 +56,10 @@ class Connector(Processor):
                 for c in cols:
                     if c in df.columns and is_datetime64tz_dtype(df[c]):
                         s = pd.to_datetime(applied.loc[hit_idx, c], errors='coerce', utc=True)
-                        s = s.dt.tz_convert(str(df[c].dtype.tz))
+                        try:
+                            s = s.dt.tz_convert(str(df[c].dtype.tz))  # type: ignore
+                        except (AttributeError, TypeError):
+                            pass
                         df.loc[hit_idx, c] = df.loc[hit_idx, c].combine_first(s)
                     elif c in ['note', 'connectedCol']:
                         if c in df.columns:
@@ -78,9 +80,8 @@ class Connector(Processor):
                                 seen.add(x)
                                 out.append(x)
                         return out
-                    df.loc[hit_idx, 'errandId'] = [
-                        _merge_ids(df.at[i, 'errandId'], applied.at[i, 'errandId']) for i in hit_idx
-                    ]
+                    for i in hit_idx:
+                        df.at[i, 'errandId'] = _merge_ids(df.at[i, 'errandId'], applied.at[i, 'errandId'])
         df['errandId'] = df['errandId'].apply(as_id_list)
 
         return df
@@ -91,12 +92,16 @@ class Connector(Processor):
         if errand_df.empty:
             return None
 
-        # errand_df['date'] = pd.to_datetime(errand_df['date'], utc=True).dt.tz_convert('Europe/Stockholm')
         errand_df = tz_convert(errand_df, 'date')
-        
-        obj_cols = errand_df.select_dtypes(include=['object', 'string']).columns
-        errand_df[obj_cols] = errand_df[obj_cols].apply(
-            lambda col: col.map(lambda v: self.clean_email_text(v) if pd.notna(v) else v))
+        text_cols = []
+        for col in errand_df.select_dtypes(include=['object', 'string']).columns:
+            sample_val = errand_df[col].dropna().iloc[0] if not errand_df[col].dropna().empty else None
+            if sample_val is not None and isinstance(sample_val, str):
+                text_cols.append(col)
+
+        if text_cols:
+            errand_df[text_cols] = errand_df[text_cols].apply(
+                lambda col: col.map(lambda v: self.clean_email_text(v) if pd.notna(v) and isinstance(v, str) else v))
         for col in ['animalName', 'ownerName']:
             errand_df[col] = errand_df[col].str.replace(r'[,._\-()/*\s]+', ' ', regex=True) \
                                             .str.replace(r'[^a-zA-ZåäöÅÄÖ\'"´ ]', '', regex=True) \
@@ -192,7 +197,7 @@ class Connector(Processor):
             mask_full_match = cand[col] == email_val
             if col == 'damageNumber': 
                 # remove the last part for avoiding overmatching(last part is usually a small number,e.g. 1)
-                mask_part_match = cand[col].apply(lambda v: str(email_val) in str(v).split('-'))
+                mask_part_match = cand[col].apply(lambda v: str(email_val) in str(v).split('-') if pd.notna(v) else False)
                 possible = cand[mask_full_match | mask_part_match]
             else:
                 possible = cand[cand[col] == email_val]

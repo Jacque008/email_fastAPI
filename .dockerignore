@@ -88,9 +88,13 @@ temp/
 
 # Old Flask code (as mentioned in directory listing)
 old_flask_code/
+data/
+data/other/
+data/test_data/
+data/*.py
 
 # Requirements (keep only the optimized one)
-requirements.txt
+# requirements.txt
 
 # Sample data
 sample_*.json

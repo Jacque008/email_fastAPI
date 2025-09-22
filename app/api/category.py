@@ -112,9 +112,9 @@ async def process_category_emails(
                     if value is None:
                         cleaned_row[key] = ""
                     else:
-                        # Convert to string but preserve array format for display
-                        if isinstance(value, list) and len(value) > 0:
-                            cleaned_row[key] = str(value)
+                        # Keep lists as lists for template processing
+                        if isinstance(value, list):
+                            cleaned_row[key] = value
                         else:
                             cleaned_row[key] = str(value) if value != "" else ""
                 processed_emails.append(cleaned_row)
@@ -145,11 +145,45 @@ async def process_category_emails(
             "error_message": f"Processing failed: {str(e)}"
         })
 
+@router.get("/test-sheets")
+async def test_sheets():
+    """Test Google Sheets access directly"""
+    try:
+        from ..services.utils import get_staffAnimal, get_payoutEntity
+
+        staff_result = get_staffAnimal()
+
+        payout_result = get_payoutEntity()
+
+        # get_clinic removed - no longer needed
+
+        return {
+            "status": "success",
+            "staff_rows": len(staff_result),
+            "payout_rows": len(payout_result),
+            "clinic_rows": len(clinic_result),
+            "message": "Google Sheets access working correctly - cache warmed"
+        }
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"❌ Error in test_sheets: {str(e)}")
+        print(f"❌ Full traceback: {error_details}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "traceback": error_details
+        }
+
 @router.post("/category_api", response_model=List[EmailOut])
 async def category_api(emails: List[EmailIn]):
     try:
         email_df = pd.DataFrame([e.model_dump(by_alias=True) for e in emails])
-        ds = EmailDataset(df=email_df, services=DefaultServices())
+
+        services = DefaultServices()
+
+        ds = EmailDataset(df=email_df, services=services)
+
         processed_df = ds.do_connect()
         
         # Use the same DataFrame processing as web interface

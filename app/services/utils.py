@@ -14,27 +14,33 @@ from sqlalchemy.sql import text as sqlalchemy_text
 
 @lru_cache(maxsize=3)
 def load_sheet_data(url, worksheet, useCols=None):
-    if os.getenv('ENV_MODE') == 'local':
-        service_account_file = "data/other/drp-system-73cd3f0ca038.json"
-        # service_account_file = "other/pw/drp-system-73cd3f0ca038.json"
-    elif os.getenv('ENV_MODE') in ['test', 'production']:
-        service_account_file = "/SERVICE_ACCOUNT_JIE/SERVICE_ACCOUNT_JIE" 
-    gc = gspread.service_account(filename=service_account_file)
-    spreadsheet = gc.open_by_url(url)
-    worksheet = spreadsheet.worksheet(worksheet)
-    raw_data = worksheet.get_all_values()
-    df = pd.DataFrame(raw_data[1:], columns=raw_data[0]) # Set the first row as header and remove it from the data
-    df = df.replace('', None)
-    if useCols:
-        df = df[list(useCols)]
+    try:
+        if os.getenv('ENV_MODE') == 'local':
+            service_account_file = "data/other/drp-system-73cd3f0ca038.json"
+        elif os.getenv('ENV_MODE') in ['test', 'production']:
+            service_account_file = "/SERVICE_ACCOUNT_JIE/SERVICE_ACCOUNT_JIE"
+
+        gc = gspread.service_account(filename=service_account_file)
+        spreadsheet = gc.open_by_url(url)
+        worksheet = spreadsheet.worksheet(worksheet)
+        raw_data = worksheet.get_all_values()
+        df = pd.DataFrame(raw_data[1:], columns=raw_data[0]) # Set the first row as header and remove it from the data
+        df = df.replace('', None)
+        if useCols:
+            df = df[list(useCols)]
+    except Exception as e:
+        print(f"❌ Error in load_sheet_data: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise
 
     return df
 
-def get_clinic():
-    url = "https://docs.google.com/spreadsheets/d/15TqXNr9UHx4BM8Ae9DbWiFmb_kERbBO1n8u_Oph7LHg/edit?gid=330037605#gid=330037605"
-    worksheet = "clinic"
-    return load_sheet_data(url, worksheet)
-
+# def get_clinic():
+#     url = "https://docs.google.com/spreadsheets/d/15TqXNr9UHx4BM8Ae9DbWiFmb_kERbBO1n8u_Oph7LHg/edit?gid=330037605#gid=330037605"
+#     worksheet = "clinic"
+#     return load_sheet_data(url, worksheet)
+ 
 def get_payoutEntity():
     url = "https://docs.google.com/spreadsheets/d/15TqXNr9UHx4BM8Ae9DbWiFmb_kERbBO1n8u_Oph7LHg/edit?gid=1488074124#gid=1488074124"
     worksheet = "payoutEntity"
@@ -53,10 +59,11 @@ def get_data_from_local_engine(db_user, db_password, db_host, db_port, db_name, 
     
     return data
 
-def get_data_from_cloud_engine(db_user, db_password, db_name, query): 
-    INSTANCE_CONNECTION_NAME = os.getenv('INSTANCE_CONNECTION_NAME')
+def get_data_from_cloud_engine(db_user, db_password, db_name, query):
+    INSTANCE_CONNECTION_NAME = os.getenv('INSTANCE_CONNECTION_NAME', 'drp-system:europe-west4:drp')
 
-    connector = Connector()  
+    connector = Connector()
+
     def getconn():
         conn = connector.connect(
             INSTANCE_CONNECTION_NAME,  # '/cloudsql/<project_id>:<region>:<instance_name>'
@@ -68,14 +75,15 @@ def get_data_from_cloud_engine(db_user, db_password, db_name, query):
         )
         return conn
 
-    pool = create_engine("postgresql+pg8000://",creator=getconn)        
+    pool = create_engine("postgresql+pg8000://",creator=getconn)
+
     with pool.connect() as db_conn:
         result = db_conn.execute(sqlalchemy_text(query))
         data = result.fetchall()
-        data = pd.DataFrame(data, columns=result.keys())
-                    
+        data = pd.DataFrame(data, columns=result.keys()) # type: ignore
+
     connector.close()
-    
+
     return data
          
 def fetchFromDB(query):
@@ -93,8 +101,12 @@ def fetchFromDB(query):
         data = get_data_from_local_engine(db_user, db_password, db_host, db_port, db_name, query)
     elif os.getenv("ENV_MODE") in ['test','production']:
         db_password = os.getenv('DB_PASSWORD')
-        # data = get_data_from_cloud_engine(db_user, db_password, db_name, query)
-        
+        if db_password:
+            pass
+        else:
+            raise ValueError("DB_PASSWORD environment variable is not set")
+        data = get_data_from_cloud_engine(db_user, db_password, db_name, query)
+
     return data
 
 def readGoogleSheet(url, worksheet, useCols=None):
@@ -323,11 +335,19 @@ def skip_thinking_part(model: str, content: str) -> str:
         result = reg.sub(r'^.*?(?:thinking|reasoning|analysis).*?\n\n', '', result, flags=reg.DOTALL | reg.IGNORECASE | reg.MULTILINE)
         result = result.strip()
     else:
-        parts = reg.split(r':\s*', content)
-        if len(parts) > 1:
-            result = ":".join(parts[1:])
-        else:
-            result = content
+        # Only remove common English AI prefixes, not Swedish introductory text
+        english_prefixes = [
+            r'^Summary:\s*',
+            r'^Here is a summary:\s*',
+            r'^Here\'s a summary:\s*',
+            r'^The summary is:\s*'
+        ]
+
+        result = content
+        for prefix in english_prefixes:
+            result = reg.sub(prefix, '', result, flags=reg.IGNORECASE | reg.MULTILINE)
+
+        result = result.strip()
 
     return result
 
@@ -352,10 +372,7 @@ def groq_chat_with_fallback(groq_client: Groq, messages: list, current_model: st
     Returns:
         Tuple of (response_content, used_model)
     """
-    # Define available models for fallback
     models = ["deepseek-r1-distill-llama-70b", "llama-3.3-70b-versatile"]
-    
-    # Try current model first, then fallback models
     models_to_try = [current_model] + [m for m in models if m != current_model]
     
     for model_name in models_to_try:
@@ -365,13 +382,12 @@ def groq_chat_with_fallback(groq_client: Groq, messages: list, current_model: st
                 model=model_name,
             )
             content = chat_completion.choices[0].message.content
-            print("\nfallback - ai_response: \n", content)
             return content or "", model_name
             
         except Exception as e:
             error_msg = str(e).lower()
             if 'rate limit' in error_msg:
-                print(f"Switch model from {model_name} to {set(models_to_try)-set(model_name)} due to reach rate limit.")
+                continue
             else:
                 raise e
     

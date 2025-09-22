@@ -55,15 +55,6 @@ class SenderResolver(BaseService):
                 .apply(lambda x: next((item.capitalize() for item in self.fb_ref_list 
                                      if isinstance(x, str) and item in x), None))
             )
-            
-        # fb_name_mapping = {
-        #     'Trygghansa': 'Trygg-Hansa',
-        #     'Mjoback': 'Mjöbäcks Pastorat Hästförsäkring',
-        #     'Manypets': 'Many Pets',
-        #     'Moderna': 'Moderna Försäkringar',
-        #     'Dina': 'Dina Försäkringar',
-        #     'Ica': 'ICA Försäkring'
-        # }
         
         mask_fb = df['source'] == 'Insurance_Company'
         df.loc[mask_fb, 'originSender'] = df.loc[mask_fb, 'originSender'].replace(fb_name_mapping)
@@ -337,7 +328,14 @@ class StaffResolver(BaseService):
     """Resolve staff animal information from email content using chain pattern"""
     def __init__(self):
         super().__init__()
-        self.staff_animal_df = get_staffAnimal()
+        self._staff_animal_df = None
+
+    @property
+    def staff_animal_df(self):
+        """Lazy loading of staff animal data"""
+        if self._staff_animal_df is None:
+            self._staff_animal_df = get_staffAnimal()
+        return self._staff_animal_df
     
     def detect_staff_animals(self, df: pd.DataFrame) -> pd.DataFrame:
         needed = ['id','category','receiver','animalName','ownerName','subject','origin','email','isStaffAnimal']
