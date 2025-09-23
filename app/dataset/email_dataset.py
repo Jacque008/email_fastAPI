@@ -66,7 +66,7 @@ class EmailDataset:
         return self
 
 
-    def refine_finalize(self, df: pd.DataFrame) -> pd.DataFrame:
+    def refine_finalize(self) -> pd.DataFrame:
         return self.classifier.refine_finalize(self.df)
     
     
@@ -121,9 +121,8 @@ class EmailDataset:
             self.df = self.classifier.categorize_emails(self.df)
             self.df = self.connector.connect_with_time_windows(self.df)
             self.df = self.classifier.refine_finalize(self.df)
-            
             return self.df
-            
+
         except Exception as e:
-            raise e
+            raise Exception(f"do_connect: Error occurred - {str(e)}")
 

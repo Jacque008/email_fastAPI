@@ -55,15 +55,6 @@ class SenderResolver(BaseService):
                 .apply(lambda x: next((item.capitalize() for item in self.fb_ref_list 
                                      if isinstance(x, str) and item in x), None))
             )
-            
-        # fb_name_mapping = {
-        #     'Trygghansa': 'Trygg-Hansa',
-        #     'Mjoback': 'Mjöbäcks Pastorat Hästförsäkring',
-        #     'Manypets': 'Many Pets',
-        #     'Moderna': 'Moderna Försäkringar',
-        #     'Dina': 'Dina Försäkringar',
-        #     'Ica': 'ICA Försäkring'
-        # }
         
         mask_fb = df['source'] == 'Insurance_Company'
         df.loc[mask_fb, 'originSender'] = df.loc[mask_fb, 'originSender'].replace(fb_name_mapping)
@@ -337,7 +328,14 @@ class StaffResolver(BaseService):
     """Resolve staff animal information from email content using chain pattern"""
     def __init__(self):
         super().__init__()
-        self.staff_animal_df = get_staffAnimal()
+        self._staff_animal_df = None
+
+    @property
+    def staff_animal_df(self):
+        """Lazy loading of staff animal data"""
+        if self._staff_animal_df is None:
+            self._staff_animal_df = get_staffAnimal()
+        return self._staff_animal_df
     
     def detect_staff_animals(self, df: pd.DataFrame) -> pd.DataFrame:
         needed = ['id','category','receiver','animalName','ownerName','subject','origin','email','isStaffAnimal']
@@ -474,6 +472,7 @@ class AddressResolver(BaseService):
             self.fb_forw_add = self.fb[:17].set_index('insuranceCompany')['forwardAddress'].to_dict()
             self.clinic_forw_add = self.clinic.loc[self.clinic['role'] == 'main_email', ['clinicName','clinicEmail']].drop_duplicates()
         except Exception as e:
+            print(f"❌ Error in AddressResolver init: {str(e)}")
             self.fb_forw_add = {}
             self.clinic_forw_add = pd.DataFrame()
   
@@ -528,6 +527,7 @@ class AddressResolver(BaseService):
             admin_name = admin_df['firstName'].values[0] if not admin_df.empty else ''
             self.result['adminInfo'] = admin_name
         except Exception as e:
+            print(f"❌ Error in detect_forward_address: {str(e)}")
             pass
         
         return self

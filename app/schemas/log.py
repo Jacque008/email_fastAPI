@@ -1,5 +1,5 @@
-from typing import Optional, Dict, Any
-from pydantic import BaseModel, Field, model_validator
+from typing import Optional
+from pydantic import BaseModel, Field
 
 class LogIn(BaseModel):
     """Input schema for chronological log requests"""

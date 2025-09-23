@@ -549,7 +549,6 @@ class LogService(BaseService):
                     break
 
             formatted_ai_response = skip_thinking_part(used_model, ai_response)
-            print("\ngenerate_risk_assessment - formatted_content: \n", formatted_ai_response)
             return self._normalize_ai_response(formatted_ai_response, errand_complete, completed_nodes, header)
             
         except Exception as e:
@@ -627,7 +626,6 @@ class LogService(BaseService):
             normalized_lines.append(detail)
 
         result = '\n'.join(normalized_lines)
-        print(f"Normalized result:\n{result}")
         return result
 
     def _normalize_risk_level(self, risk_text: str) -> str:
@@ -684,13 +682,11 @@ class LogService(BaseService):
             present_nodes.add("Send_To_IC")  # Update_DR implies Send_To_IC must have happened
 
         for step_key, swedish_next_action in self.required_steps.items():
-            print(step_key, swedish_next_action)
             if step_key not in present_nodes:
                 return swedish_next_action
 
         return "Avsluta ärendet"
 
-    
     def create_formatted_log(self, base: pd.DataFrame, *log_dfs) -> Tuple[Dict, Dict]:
         """Create formatted chronological log with optimized processing"""
         def filter_columns(df):

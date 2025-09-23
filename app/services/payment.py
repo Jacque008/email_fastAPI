@@ -11,18 +11,17 @@ class PaymentService(BaseService):
     
     def __init__(self):
         super().__init__()
-        self.info_reg = pd.read_csv(f"{self.folder}/infoReg.csv")
+        # Use cached data instead of reading CSV files directly
+        # self.info_reg and self.bank_map are already loaded by BaseService
         self.info_item_list = self.info_reg.item.to_list()
-        self.bank_map = pd.read_csv(f"{self.folder}/bankMap.csv")
         self.bank_dict = self.bank_map.set_index('bankName')['insuranceCompanyReference'].to_dict()
-        self.payout_entity = get_payoutEntity()
+        self._payout_entity = None
         self.matching_cols_pay = ['extractReference','extractOtherNumber','extractDamageNumber']
         self.matching_cols_errand = ['isReference','damageNumber','invoiceReference','ocrNumber']
         self.base_url = 'https://admin.direktregleringsportalen.se/errands/'         
         # self.payment_query = self.queries['payment'].iloc[0] 
         self.errand_pay_query = self.queries['errandPay'].iloc[0] 
         self.errand_link_query = self.queries['errandLink'].iloc[0]
-        
         self.payout_query = self.queries['payout'].iloc[0]
         
         # Pre-compile regex patterns for better performance
@@ -45,8 +44,16 @@ class PaymentService(BaseService):
                 compiled_pattern = reg.compile(pattern, reg.DOTALL | reg.IGNORECASE)
                 self._precompiled_patterns[item] = compiled_pattern
             except Exception as e:
+                print(f"❌ Error compiling pattern '{item}': {str(e)}")
                 self._precompiled_patterns[item] = None
                 
+    @property
+    def payout_entity(self):
+        """Lazy loading of payout entity data"""
+        if self._payout_entity is None:
+            self._payout_entity = get_payoutEntity()
+        return self._payout_entity
+
     def _get_entity_dicts(self):
         """Cache entity dictionaries to avoid repeated computation"""
         if not self._entity_dicts_cached:
@@ -87,7 +94,6 @@ class PaymentService(BaseService):
                     
     def init_payment(self, pay: pd.DataFrame) -> pd.DataFrame:
         """Process payment data - extract references and initialize columns"""
-        # pay['createdAt'] = pd.to_datetime(pay['createdAt'], utc=True).dt.tz_convert('Europe/Stockholm') 
         pay = tz_convert(pay, 'createdAt')
         mask = pay['reference'].notna()
         if mask.any():
@@ -127,7 +133,12 @@ class PaymentService(BaseService):
                     if col not in row_pay or pd.isna(row_pay.get(col)):
                         pay.at[idx, col] = matched_value
                     else:
-                        pay.at[idx, 'isReference'].append(matched_value)
+                        # Ensure isReference is a list
+                        current_val = pay.at[idx, 'isReference']
+                        if not isinstance(current_val, list):
+                            current_val = [] if pd.isna(current_val) else [current_val]
+                        current_val.append(matched_value)
+                        pay.at[idx, 'isReference'] = current_val
                                 
         # Clean up duplicates
         pay.loc[pay['extractDamageNumber'] == pay['extractOtherNumber'], 'extractDamageNumber'] = None
@@ -143,7 +154,7 @@ class PaymentService(BaseService):
             matched_ic_ids = self._find_matches(pay, errand, idx, row_pay)
             qty = len(matched_ic_ids)
             if qty > 0:
-                pay.at[idx, 'insuranceCaseId'].extend(matched_ic_ids) 
+                pay.at[idx, 'insuranceCaseId'].extend(matched_ic_ids)  # type: ignore 
                 links = self._generate_links(row_pay['insuranceCaseId'], row_pay['val_errand'], 'ic.id')
                 pay.at[idx, 'referenceLink'] = links
                 if qty == 1:
@@ -177,11 +188,11 @@ class PaymentService(BaseService):
                 idxs_sorted = sorted(indices)
                 matched_rows = errand.loc[idxs_sorted]
 
-                current_refs = set(pay.at[idx, 'isReference'])
+                current_refs = set(pay.at[idx, 'isReference'])  # type: ignore
                 for ref in matched_rows['isReference']:
                     if ref not in current_refs:
-                        pay.at[idx, 'isReference'].append(ref)
-                        pay.at[idx, 'val_pay'].append(val_pay)
+                        pay.at[idx, 'isReference'].append(ref)  # type: ignore
+                        pay.at[idx, 'val_pay'].append(val_pay)  # type: ignore
                         current_refs.add(ref)
 
                 rows_amount_ok = matched_rows[matched_rows['settlementAmount'] == val_amount]
@@ -189,8 +200,8 @@ class PaymentService(BaseService):
                     for _, r in rows_amount_ok.iterrows():
                         icid = int(r['insuranceCaseId'])
                         if icid not in matched[col_pay]:
-                            matched[col_pay].append(icid)
-                        pay.at[idx, 'val_errand'].append(r[col_errand])
+                            matched[col_pay].append(icid)  # type: ignore
+                        pay.at[idx, 'val_errand'].append(r[col_errand])  # type: ignore
 
         matchedLists = [matched[c] for c in self.matching_cols_pay if matched[c]]
         if not matchedLists:
@@ -287,8 +298,8 @@ class PaymentService(BaseService):
                             matched_ic_ids.append(row_sub['insuranceCaseId'])
                             
                         if str(row_sub['isReference']) not in [str(ref) for ref in pay.at[idx, 'isReference']]:
-                            pay.at[idx, 'isReference'].append(str(row_sub['isReference']))
-                            pay.at[idx, 'val_pay'].append(str(row_sub['isReference']))
+                            pay.at[idx, 'isReference'].append(str(row_sub['isReference']))  # type: ignore
+                            pay.at[idx, 'val_pay'].append(str(row_sub['isReference']))  # type: ignore
                             
                         if str(row_sub['isReference']) not in ref_amount_dict:
                             settlement_amount = row_sub['settlementAmount'] if pd.notna(row_sub['settlementAmount']) else 0

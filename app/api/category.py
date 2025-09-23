@@ -73,8 +73,6 @@ async def process_category_emails(
             processed_df = ds.do_connect()
 
         except Exception as debug_error:
-            import traceback
-            traceback.print_exc()
             raise debug_error
         
         try:
@@ -98,8 +96,6 @@ async def process_category_emails(
             rows = cleaned_df.to_dict(orient="records")
             
         except Exception as convert_error:
-            import traceback
-            traceback.print_exc()
             raise convert_error
         
         # Clean up the data for template display - simplified since DataFrame is already properly processed
@@ -112,15 +108,13 @@ async def process_category_emails(
                     if value is None:
                         cleaned_row[key] = ""
                     else:
-                        # Convert to string but preserve array format for display
-                        if isinstance(value, list) and len(value) > 0:
-                            cleaned_row[key] = str(value)
+                        # Keep lists as lists for template processing
+                        if isinstance(value, list):
+                            cleaned_row[key] = value
                         else:
                             cleaned_row[key] = str(value) if value != "" else ""
                 processed_emails.append(cleaned_row)
         except Exception as cleanup_error:
-            import traceback
-            traceback.print_exc()
             raise cleanup_error
         
         # Generate and display statistics
@@ -128,8 +122,6 @@ async def process_category_emails(
         try:
             stats_data = ds.classifier.statistic(processed_df)
         except Exception as stats_error:
-            import traceback
-            traceback.print_exc()
             raise Exception(f"Statistics failed: {str(stats_error)}")
 
         return templates.TemplateResponse("category.html", {
@@ -145,11 +137,16 @@ async def process_category_emails(
             "error_message": f"Processing failed: {str(e)}"
         })
 
+
 @router.post("/category_api", response_model=List[EmailOut])
 async def category_api(emails: List[EmailIn]):
     try:
         email_df = pd.DataFrame([e.model_dump(by_alias=True) for e in emails])
-        ds = EmailDataset(df=email_df, services=DefaultServices())
+
+        services = DefaultServices()
+
+        ds = EmailDataset(df=email_df, services=services)
+
         processed_df = ds.do_connect()
         
         # Use the same DataFrame processing as web interface

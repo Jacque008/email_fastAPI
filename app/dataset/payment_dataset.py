@@ -10,7 +10,12 @@ from ..services.utils import model_to_dataframe, dataframe_to_model
 @dataclass
 class PaymentDataset:
     """Dataset class that chains all atomic functions for payment matching - optimized"""
-    services: PaymentService = field(default_factory=PaymentService)
+
+    @property
+    def services(self):
+        if not hasattr(self, '_services'):
+            self._services = PaymentService()
+        return self._services
 
     def match_payments(self, payments: List[PaymentIn]) -> List[PaymentOut]:
         """

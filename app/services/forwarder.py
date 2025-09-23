@@ -4,11 +4,10 @@ Extracted from workflow/create_forwarding.py
 """
 import regex as reg
 import pandas as pd
-from typing import Dict
-from bs4 import BeautifulSoup
+from typing import Dict, List
+import inscriptis
 from dataclasses import dataclass, field
 from html import escape
-from typing import List
 from .base_service import BaseService
 from .utils import truncate_text, base_match
 
@@ -27,12 +26,13 @@ class Forwarder(BaseService):
             self.fw_cates = [item.replace('_Template', '') for item in fw_cates]
             self.trun_list = self.forward_suggestion[self.forward_suggestion['action']=='Trim'].templates.to_list()
             self.sub_list = self.forward_suggestion[self.forward_suggestion['action']=='Subject'].templates.to_list()
-            self.forward_format = pd.read_csv(f"{self.folder}/forwardFormat.csv")
+            # Use cached forward_format instead of reading directly
+            # self.forward_format is already available from BaseService
             self.request_fw_sub = self.forward_suggestion[self.forward_suggestion['action']=='Forward_Subject'].templates.to_list()
         except Exception as e:
-            self.forward_format = pd.DataFrame()
+            print(f"❌ Error in _setup_generation_configs: {str(e)}")
+            raise e
             
-
     def generate_forwarding_subject(self, email: str, category: str, **kwargs) -> str:
         """Generate forward subject based on email content and category"""
         try:
@@ -44,9 +44,10 @@ class Forwarder(BaseService):
                     return self._format_subject_template(subject_template, category, **kwargs)
             
             return forward_subject.strip() if forward_subject else ""
-            
+
         except Exception as e:
-            return ""
+            print(f"❌ Error in generate_forwarding_subject: {str(e)}")
+            raise e
     
     def generate_email_content(self, row_data: Dict, admin_name: str = '') -> str:
         """Generate email content based on template and data"""
@@ -63,7 +64,8 @@ class Forwarder(BaseService):
             return self._format_forward_text(forward_text)
             
         except Exception as e:
-            return ""
+            print(f"❌ Error in generate_email_content: {str(e)}")
+            raise e
      
     def _get_category_subject_template(self, category: str) -> str:
         try:
@@ -109,9 +111,10 @@ class Forwarder(BaseService):
                 text = self._check_attachment(html_content, text)
             
             return text
-            
+
         except Exception as e:
-            return email
+            print(f"❌ Error in _process_email_text: {str(e)}")
+            raise e
 
     def _handel_colon(self, text: str) -> str:
         """Handle colon formatting"""
@@ -151,28 +154,36 @@ class Forwarder(BaseService):
         return text
 
     def _check_attachment(self, html: str, text: str) -> str:
-        """Check and process attachments from HTML content"""
+        """Check and process attachments from HTML content using inscriptis"""
         attachment_list = []
-        
-        try:
-            soup = BeautifulSoup(html, 'html.parser')
-            pattern = r'(?:^|\s)(attachments|intercom-attachments)(?=\s|$)'
-            attachments_table = soup.find('table', class_=reg.compile(pattern))
 
-            if attachments_table:
-                for a_tag in attachments_table.find_all('a', class_=reg.compile(r'(?:^|\s)intercom-attachment(?:\s|$)')):
-                    href = a_tag.get('href', '')
-                    filename = escape(a_tag.get_text(strip=True))
+        try:
+            # Use regex to find attachment tables in the HTML
+            pattern = r'(?:^|\s)(attachments|intercom-attachments)(?=\s|$)'
+            table_match = reg.search(rf'<table[^>]*class="[^"]*{pattern}[^"]*"[^>]*>(.*?)</table>', html, reg.DOTALL | reg.IGNORECASE)
+
+            if table_match:
+                table_html = table_match.group(0)
+
+                # Extract all anchor tags with intercom-attachment class
+                anchor_pattern = r'<a[^>]*class="[^"]*intercom-attachment[^"]*"[^>]*href="([^"]*)"[^>]*>([^<]*)</a>'
+                anchor_matches = reg.findall(anchor_pattern, table_html, reg.IGNORECASE)
+
+                for href, filename in anchor_matches:
                     if not href.startswith(('http://', 'https://')):
                         continue
-                    
-                    if filename:
-                        attachment_list.append(f'<a href="{href}" target="_blank" rel="noopener">{filename}</a>')
-            
+
+                    # Clean filename using inscriptis for any nested HTML
+                    clean_filename = inscriptis.get_text(filename).strip()
+                    if clean_filename:
+                        attachment_list.append(f'<a href="{href}" target="_blank" rel="noopener">{escape(clean_filename)}</a>')
+
             if attachment_list:
                 separator = "\n[Attachment]: "
                 return text + separator + "\n".join(attachment_list)
         except Exception as e:
+            print(f"❌ Error in _check_attachment: {str(e)}")
+            # Return original text if attachment processing fails
             pass
 
         return text
@@ -254,10 +265,12 @@ class Forwarder(BaseService):
                 return template.format(EMAIL=text, INFO=info, ADMIN=admin)
             
         except Exception as e:
+            print(f"❌ Error in _format_content_template: {str(e)}")
             # Fallback template with all required parameters
             try:
                 return template.format(WHO=sender, EMAIL=text, INFO=info, ADMIN=admin, REFERENCE=ref)
             except Exception as fallback_error:
+                print(f"❌ Fallback template failed: {str(fallback_error)}")
                 return f"Hej {sender},\n\n{text}\n\n{info}\n\nMed vänlig hälsning,\n{admin}"
     
     def _get_provet_cloud_template(self) -> str:
@@ -289,5 +302,6 @@ class Forwarder(BaseService):
             
             return text
         except Exception as e:
+            print(f"❌ Error in _format_forward_text: {str(e)}")
             return forward_text or ""
     

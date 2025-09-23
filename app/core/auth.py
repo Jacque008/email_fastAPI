@@ -67,7 +67,7 @@ class AuthService:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate token"
             )
-    
+
     @staticmethod
     def check_email_authorization(email: str, custom_query: Optional[str] = None) -> bool:
         """
@@ -84,22 +84,14 @@ class AuthService:
             Exception: Throw exception when database query fails
         """
         try:
-            # Use custom query or default query
             if custom_query:
                 query = custom_query
             else:
-                # Default query - please modify according to actual table structure
-                query = "SELECT email FROM admin_user au"
-            
-            # Get authorized email list from database
+                query = "SELECT email FROM admin_user au"            
             whitelist_df = fetchFromDB(query)
             if whitelist_df.empty:
                 return False
-            
-            # Extract email list and convert to lowercase for comparison
             authorized_emails = whitelist_df['email'].str.lower().tolist()
-            
-            # Check if user email is in whitelist (case insensitive)
             return email.lower() in authorized_emails
             
         except Exception as e:
@@ -131,19 +123,16 @@ def _get_test_user(request: Request) -> Optional[dict]:
 def get_current_user(request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
     """Get current user (supports session and JWT with expiration)"""
 
-    # Check for test user in development
     test_user = _get_test_user(request)
     if test_user:
         return test_user
 
-    # Check JWT token first
     if credentials:
         payload = AuthService.verify_token(credentials.credentials)
         user = payload.get("user")
         if user:
             return user
 
-    # Check session with expiration
     user = request.session.get("user")
     login_time = request.session.get("login_time")
 

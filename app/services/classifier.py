@@ -4,17 +4,23 @@ from .base_service import BaseService
 from .utils import fetchFromDB, tz_convert
 from typing import Optional
 
-class Classifier(BaseService):    
+class Classifier(BaseService):
     def __init__(self):
         super().__init__()
         self.info_query = self.queries['info'].iloc[0]
-        self.category_reg_list = pd.read_csv(f"{self.folder}/categoryReg.csv")
         self.category_list = self.category_reg_list['category'].unique().tolist()
         self.category_patterns = {category: reg.compile('|'.join(f"(?:{p})" for p in regs.dropna() if str(p)), reg.IGNORECASE)
                                     for category, regs in self.category_reg_list.groupby('category')['regex']
                                     if not regs.dropna().empty
                                 }
-    
+
+    def _safe_pattern_search(self, pattern, s):
+        """Safely search pattern in string, handling None values and errors"""
+        try:
+            return bool(pattern and pattern.search(str(s))) if s and str(s) != 'nan' else False
+        except (AttributeError, TypeError):
+            return False
+
     def initialize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         number_cols = self.number_reg_list['number'].unique()
         amount_cols = {'settlementAmount', 'attach_settlementAmount','totalAmount', 'attach_totalAmount','folksamOtherAmount'}
@@ -149,9 +155,11 @@ class Classifier(BaseService):
             if category not in self.category_patterns:
                 continue
             pattern = self.category_patterns.get(category)
+            if pattern is None:
+                continue
 
             text = df['email'].astype(str)
-            mask_regex = text.map(lambda s: bool(pattern.search(s)))
+            mask_regex = text.map(lambda s: self._safe_pattern_search(pattern, s))
             combined_mask = unassigned_mask & rule['mask'] & mask_regex.fillna(False)
             
             df.loc[combined_mask, 'category'] = category
@@ -168,8 +176,10 @@ class Classifier(BaseService):
         for category in remaining_categories:
             if category in self.category_patterns:
                 pattern = self.category_patterns[category]
+                if pattern is None:
+                    continue
                 text = df['email'].astype(str)
-                mask_regex = text.map(lambda s: bool(pattern.search(s)))
+                mask_regex = text.map(lambda s: self._safe_pattern_search(pattern, s))
                 mask = unassigned_mask & mask_regex.fillna(False)
                 df.loc[mask, 'category'] = category
                 unassigned_mask = df['category'].isna()

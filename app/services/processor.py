@@ -19,6 +19,9 @@ class Processor(BaseService):
 
     
     def clean_email_text(self, text):
+        # Convert to string if it's not already (handles Decimal, int, etc.)
+        if not isinstance(text, str):
+            text = str(text) if text is not None else ""
         text = html.unescape(text or "")
         text = reg.sub(r'</p\s*>', '</p>\n', text, flags=reg.IGNORECASE)
         text = reg.sub(r'<[^>]+>', '', text)

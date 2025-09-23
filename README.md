@@ -53,8 +53,8 @@ uvicorn app.main:app --reload --port 8000
 ```
 
 4. Open docs:
-   - Swagger UI: http://127.0.0.1:8000/docs
-   - ReDoc: http://127.0.0.1:8000/redoc
+   - Swagger UI: http://127.0.0.1:5000/docs
+   - ReDoc: http://127.0.0.1:5000/redoc
 
 ## Notes
 

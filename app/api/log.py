@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Query, Request, Form
+from fastapi import APIRouter, HTTPException, Depends, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional
 import logging
 import os
 from ..schemas.log import LogIn, LogOut

@@ -15,36 +15,52 @@ class ForwardingEmailDataset(BaseService):
     
     def __post_init__(self):
         super().__init__()
-        self.forwarder = self.services.get_forwarder()
-        self.addressResolver = self.services.get_addressResolver()
-        self._setup_generation_configs()
 
-    def _setup_generation_configs(self):
-        self.forward_query = self.queries['forwardSummaryInfo'].iloc[0]
+    @property
+    def forwarder(self):
+        if not hasattr(self, '_forwarder'):
+            self._forwarder = self.services.get_forwarder()
+        return self._forwarder
+
+    @property
+    def addressResolver(self):
+        if not hasattr(self, '_addressResolver'):
+            self._addressResolver = self.services.get_addressResolver()
+        return self._addressResolver
+
+    @property
+    def forward_query(self):
+        if not hasattr(self, '_forward_query'):
+            self._forward_query = self.queries['forwardSummaryInfo'].iloc[0]
+        return self._forward_query
     
     def enrich_email_data(self, request: ForwardingIn) -> "ForwardingEmailDataset":
         """Enrich DataFrame with email data from database"""
         try:
             self.df = model_to_dataframe(request)
+
             if self.forward_query and not self.df.empty:
                 id = self.df.iloc[0]['id']
-                
+
                 bas_email = fetchFromDB(self.email_spec_query.format(EMAILID=id))
                 ds = EmailDataset(df=bas_email, services=self.services)
                 email = ds.do_preprocess()
+
                 email = email.copy()
                 email.loc[:,'userId'] = self.df.iloc[0]['userId']
-                columns_to_drop = ['receiver','errandId','reference','sender'] 
+                columns_to_drop = ['receiver','errandId','reference','sender']
                 existing_columns = [col for col in columns_to_drop if col in email.columns]
                 if existing_columns:
                     email = email.drop(columns=existing_columns)
-                    
-                adds_on = fetchFromDB(self.forward_query.format(ID=id))        
+
+                adds_on = fetchFromDB(self.forward_query.format(ID=id))
+
                 if not adds_on.empty:
                     self.df = email.merge(adds_on, on='id', how='left')
-                    
+
         except Exception as e:
-            pass
+            print(f"❌ enrich_email_data error: {str(e)}")
+            raise 
         return self
     
     def clean_email_content(self) -> "ForwardingEmailDataset":
@@ -103,22 +119,21 @@ class ForwardingEmailDataset(BaseService):
     
     def do_forwarding(self, request: ForwardingIn) -> ForwardingOut:
         try:
-            ds = ForwardingEmailDataset(services=self.services)
-            (ds#.init_fw_email(request)
-              .enrich_email_data(request)
-              .clean_email_content())
-            
+            # Use self instead of creating a new instance (avoiding double initialization)
+            self.enrich_email_data(request)
+            self.clean_email_content()
+
             result = ForwardingOut(id=request.id)
-            if ds.df.empty:
+            if self.df.empty:
                 return result
 
-            row_data = ds.df.iloc[0].to_dict()
+            row_data = self.df.iloc[0].to_dict()
 
-            result = ds.generate_forward_address(result, row_data)
-            result = ds.generate_forward_subject(result, row_data)
-            result = ds.generate_forward_content(result, row_data)
+            result = self.generate_forward_address(result, row_data)
+            result = self.generate_forward_subject(result, row_data)
+            result = self.generate_forward_content(result, row_data)
             return result
-            
+
         except Exception as e:
             raise Exception(f"Forwarding processing failed: {str(e)}")
 

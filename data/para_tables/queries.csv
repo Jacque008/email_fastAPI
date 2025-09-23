@@ -114,7 +114,7 @@ id,errandConnect,emailSpec,errandInfo,forwardSummaryInfo,payment,errandPay,erran
                                       WHERE inst.""insuranceCaseId"" = ist.""insuranceCaseId"")
                                 ) AS ls ON ls.""insuranceCaseId"" = ic.id
                     WHERE es.cancelled = False
-                          AND es.complete IS FALSE
+                          AND es.complete = False
                           {CONDITION}
                     ORDER BY er.""createdAt"" DESC;","  SELECT DISTINCT
                           ic.id,
