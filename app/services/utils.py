@@ -24,15 +24,12 @@ def load_sheet_data(url, worksheet, useCols=None):
         spreadsheet = gc.open_by_url(url)
         worksheet = spreadsheet.worksheet(worksheet)
         raw_data = worksheet.get_all_values()
-        df = pd.DataFrame(raw_data[1:], columns=raw_data[0]) # Set the first row as header and remove it from the data
+        df: pd.DataFrame = pd.DataFrame(raw_data[1:], columns=raw_data[0]) 
         df = df.replace('', None)
         if useCols:
             df = df[list(useCols)]
     except Exception as e:
-        print(f"❌ Error in load_sheet_data: {type(e).__name__}: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        raise
+        raise Exception(f"Error in load_sheet_data: {str(e)}")
 
     return df
 

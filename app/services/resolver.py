@@ -472,6 +472,7 @@ class AddressResolver(BaseService):
             self.fb_forw_add = self.fb[:17].set_index('insuranceCompany')['forwardAddress'].to_dict()
             self.clinic_forw_add = self.clinic.loc[self.clinic['role'] == 'main_email', ['clinicName','clinicEmail']].drop_duplicates()
         except Exception as e:
+            print(f"❌ Error in AddressResolver init: {str(e)}")
             self.fb_forw_add = {}
             self.clinic_forw_add = pd.DataFrame()
   
@@ -526,6 +527,7 @@ class AddressResolver(BaseService):
             admin_name = admin_df['firstName'].values[0] if not admin_df.empty else ''
             self.result['adminInfo'] = admin_name
         except Exception as e:
+            print(f"❌ Error in detect_forward_address: {str(e)}")
             pass
         
         return self

@@ -21,7 +21,6 @@ async def login_page(request: Request, force_fresh: bool = False):
         request.session.clear()
         return RedirectResponse(url="/auth/google", status_code=302)
 
-    # Check if user is already authenticated
     try:
         from ..core.auth import get_current_user
         from ..core.auth import security
@@ -31,7 +30,6 @@ async def login_page(request: Request, force_fresh: bool = False):
         else:
             raise HTTPException(status_code=401, detail="No credentials")
 
-        # Show dashboard if authenticated
         user_display = user.get("name") or user.get("email") or "User"
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
@@ -39,7 +37,6 @@ async def login_page(request: Request, force_fresh: bool = False):
             "userId": user_display
         })
     except:
-        # Not authenticated, clear session and redirect to OAuth
         request.session.clear()
         return RedirectResponse(url="/auth/google", status_code=302)
 

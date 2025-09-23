@@ -1,6 +1,5 @@
 from __future__ import annotations
 import pandas as pd
-import time
 from dataclasses import dataclass, field
 from typing import Sequence
 from ..services.services import DefaultServices
@@ -23,33 +22,14 @@ class EmailDataset:
     )
 
     def __post_init__(self):
-        start_time = time.time()
-
-        step_start = time.time()
         self.processor = self.services.get_processor()
-
-        step_start = time.time()
         self.parser = self.services.get_parser()
-
-        step_start = time.time()
         self.sender_detector = self.services.get_sender_detector()
-
-        step_start = time.time()
         self.receiver_detector = self.services.get_receiver_detector()
-
-        step_start = time.time()
         self.staff_detector = self.services.get_staff_detector()
-
-        step_start = time.time()
         self.extractor = self.services.get_extractor()
-
-        step_start = time.time()
         self.classifier = self.services.get_classifier()
-
-        step_start = time.time()
         self.connector = self.services.get_connector()
-
-        total_time = time.time() - start_time
     
     def adjust_time(self) -> "EmailDataset":
         self.df = self.processor.adjust_time_format(self.df)
@@ -86,7 +66,7 @@ class EmailDataset:
         return self
 
 
-    def refine_finalize(self, df: pd.DataFrame) -> pd.DataFrame:
+    def refine_finalize(self) -> pd.DataFrame:
         return self.classifier.refine_finalize(self.df)
     
     
@@ -134,36 +114,15 @@ class EmailDataset:
     def do_connect(self) -> pd.DataFrame:
         """Categorize emails and connect them with errands."""
         try:
-            start_time = time.time()
-
-            step_start = time.time()
             self.df = self.do_preprocess()
-
-            step_start = time.time()
             self.df = self.classifier.initialize_columns(self.df)
-
-            step_start = time.time()
             self.df = self.extractor.extract_numbers_from_attach(self.df)
-
-            step_start = time.time()
             self.df = self.extractor.extract_numbers_from_email(self.df)
-
-            step_start = time.time()
             self.df = self.classifier.categorize_emails(self.df)
-
-            step_start = time.time()
             self.df = self.connector.connect_with_time_windows(self.df)
-
-            step_start = time.time()
             self.df = self.classifier.refine_finalize(self.df)
-
-            total_time = time.time() - start_time
-
             return self.df
 
         except Exception as e:
-            import traceback
-            print(f"❌ do_connect: Error occurred - {str(e)}")
-            print(f"❌ Full traceback: {traceback.format_exc()}")
-            raise e
+            raise Exception(f"do_connect: Error occurred - {str(e)}")
 

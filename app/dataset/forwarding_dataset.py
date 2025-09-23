@@ -1,6 +1,5 @@
 from __future__ import annotations
 import pandas as pd
-import time
 from typing import Dict
 from dataclasses import dataclass, field
 from ..services.utils import fetchFromDB, model_to_dataframe
@@ -15,23 +14,17 @@ class ForwardingEmailDataset(BaseService):
     df: pd.DataFrame = field(default_factory=pd.DataFrame)
     
     def __post_init__(self):
-        start_time = time.time()
-
         super().__init__()
-
-        total_time = time.time() - start_time
 
     @property
     def forwarder(self):
         if not hasattr(self, '_forwarder'):
-            step_start = time.time()
             self._forwarder = self.services.get_forwarder()
         return self._forwarder
 
     @property
     def addressResolver(self):
         if not hasattr(self, '_addressResolver'):
-            step_start = time.time()
             self._addressResolver = self.services.get_addressResolver()
         return self._addressResolver
 
@@ -44,19 +37,13 @@ class ForwardingEmailDataset(BaseService):
     def enrich_email_data(self, request: ForwardingIn) -> "ForwardingEmailDataset":
         """Enrich DataFrame with email data from database"""
         try:
-            step_start = time.time()
             self.df = model_to_dataframe(request)
 
             if self.forward_query and not self.df.empty:
                 id = self.df.iloc[0]['id']
 
-                step_start = time.time()
                 bas_email = fetchFromDB(self.email_spec_query.format(EMAILID=id))
-
-                step_start = time.time()
                 ds = EmailDataset(df=bas_email, services=self.services)
-
-                step_start = time.time()
                 email = ds.do_preprocess()
 
                 email = email.copy()
@@ -66,7 +53,6 @@ class ForwardingEmailDataset(BaseService):
                 if existing_columns:
                     email = email.drop(columns=existing_columns)
 
-                step_start = time.time()
                 adds_on = fetchFromDB(self.forward_query.format(ID=id))
 
                 if not adds_on.empty:
@@ -74,8 +60,7 @@ class ForwardingEmailDataset(BaseService):
 
         except Exception as e:
             print(f"❌ enrich_email_data error: {str(e)}")
-            import traceback
-            print(f"❌ enrich_email_data traceback: {traceback.format_exc()}")
+            raise 
         return self
     
     def clean_email_content(self) -> "ForwardingEmailDataset":
@@ -134,38 +119,22 @@ class ForwardingEmailDataset(BaseService):
     
     def do_forwarding(self, request: ForwardingIn) -> ForwardingOut:
         try:
-            start_time = time.time()
-
             # Use self instead of creating a new instance (avoiding double initialization)
-            step_start = time.time()
             self.enrich_email_data(request)
-
-            step_start = time.time()
             self.clean_email_content()
 
             result = ForwardingOut(id=request.id)
             if self.df.empty:
-                print("❌ DataFrame is empty, returning empty result")
                 return result
 
             row_data = self.df.iloc[0].to_dict()
 
-            step_start = time.time()
             result = self.generate_forward_address(result, row_data)
-
-            step_start = time.time()
             result = self.generate_forward_subject(result, row_data)
-
-            step_start = time.time()
             result = self.generate_forward_content(result, row_data)
-
-            total_time = time.time() - start_time
             return result
 
         except Exception as e:
-            import traceback
-            print(f"❌ do_forwarding: Error occurred - {str(e)}")
-            print(f"❌ Full traceback: {traceback.format_exc()}")
             raise Exception(f"Forwarding processing failed: {str(e)}")
 
     

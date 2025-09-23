@@ -9,7 +9,6 @@ class BaseService:
     Base service class for all business services.
     Provides common functionality like data loading and environment configuration.
     """
-    # Class-level cache to avoid reloading CSV files multiple times
     _data_cache = {}
     _cache_initialized = False
 
@@ -26,7 +25,6 @@ class BaseService:
             BaseService._cache_initialized = True
         else:
             self._load_from_cache()
-
 
     def _load_tables(self):
         """Load all required data tables and configuration files"""

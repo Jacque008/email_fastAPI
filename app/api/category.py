@@ -73,8 +73,6 @@ async def process_category_emails(
             processed_df = ds.do_connect()
 
         except Exception as debug_error:
-            import traceback
-            traceback.print_exc()
             raise debug_error
         
         try:
@@ -98,8 +96,6 @@ async def process_category_emails(
             rows = cleaned_df.to_dict(orient="records")
             
         except Exception as convert_error:
-            import traceback
-            traceback.print_exc()
             raise convert_error
         
         # Clean up the data for template display - simplified since DataFrame is already properly processed
@@ -119,8 +115,6 @@ async def process_category_emails(
                             cleaned_row[key] = str(value) if value != "" else ""
                 processed_emails.append(cleaned_row)
         except Exception as cleanup_error:
-            import traceback
-            traceback.print_exc()
             raise cleanup_error
         
         # Generate and display statistics
@@ -128,8 +122,6 @@ async def process_category_emails(
         try:
             stats_data = ds.classifier.statistic(processed_df)
         except Exception as stats_error:
-            import traceback
-            traceback.print_exc()
             raise Exception(f"Statistics failed: {str(stats_error)}")
 
         return templates.TemplateResponse("category.html", {
@@ -145,35 +137,6 @@ async def process_category_emails(
             "error_message": f"Processing failed: {str(e)}"
         })
 
-@router.get("/test-sheets")
-async def test_sheets():
-    """Test Google Sheets access directly"""
-    try:
-        from ..services.utils import get_staffAnimal, get_payoutEntity
-
-        staff_result = get_staffAnimal()
-
-        payout_result = get_payoutEntity()
-
-        # get_clinic removed - no longer needed
-
-        return {
-            "status": "success",
-            "staff_rows": len(staff_result),
-            "payout_rows": len(payout_result),
-            "clinic_rows": len(clinic_result),
-            "message": "Google Sheets access working correctly - cache warmed"
-        }
-    except Exception as e:
-        import traceback
-        error_details = traceback.format_exc()
-        print(f"❌ Error in test_sheets: {str(e)}")
-        print(f"❌ Full traceback: {error_details}")
-        return {
-            "status": "error",
-            "message": str(e),
-            "traceback": error_details
-        }
 
 @router.post("/category_api", response_model=List[EmailOut])
 async def category_api(emails: List[EmailIn]):

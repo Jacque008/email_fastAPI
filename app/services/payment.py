@@ -44,6 +44,7 @@ class PaymentService(BaseService):
                 compiled_pattern = reg.compile(pattern, reg.DOTALL | reg.IGNORECASE)
                 self._precompiled_patterns[item] = compiled_pattern
             except Exception as e:
+                print(f"❌ Error compiling pattern '{item}': {str(e)}")
                 self._precompiled_patterns[item] = None
                 
     @property

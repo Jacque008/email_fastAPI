@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional
 from pydantic import BaseModel, Field, model_validator
 
 class SummaryIn(BaseModel):
@@ -47,5 +47,3 @@ class SummaryOutAPI(BaseModel):
     Summary_Combined_Info: Optional[str] = Field(default=None, description="Combined summary of all communications")
     Error_Combined_Info: Optional[str] = Field(default=None, description="Combined processing error message")
 
-# Keep the original SummaryOut for backward compatibility
-# SummaryOut = SummaryOutWeb
