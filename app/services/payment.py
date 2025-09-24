@@ -19,8 +19,8 @@ class PaymentService(BaseService):
         self.matching_cols_pay = ['extractReference','extractOtherNumber','extractDamageNumber']
         self.matching_cols_errand = ['isReference','damageNumber','invoiceReference','ocrNumber']
         self.base_url = 'https://admin.direktregleringsportalen.se/errands/'         
-        # self.payment_query = self.queries['payment'].iloc[0] 
         self.errand_pay_query = self.queries['errandPay'].iloc[0] 
+        self.partial_pay_query = self.queries['partialPay'].iloc[0]
         self.errand_link_query = self.queries['errandLink'].iloc[0]
         self.payout_query = self.queries['payout'].iloc[0]
         
@@ -32,7 +32,7 @@ class PaymentService(BaseService):
         # Cache expensive dictionary operations
         self._entity_dicts_cached = False
         self._payout_entity_source = {}
-        self._ic_dict = {}
+        self._fb_dict = {}
         self._clinic_dict = {}
         
     def _compile_info_patterns(self):
@@ -58,13 +58,13 @@ class PaymentService(BaseService):
         """Cache entity dictionaries to avoid repeated computation"""
         if not self._entity_dicts_cached:
             self._payout_entity_source = self.payout_entity.set_index('payoutEntity')['source'].to_dict()
-            self._ic_dict = self.payout_entity.loc[self.payout_entity['source'] == 'Insurance_Company'].groupby('payoutEntity')['clinic'].apply(list).to_dict()
+            self._fb_dict = self.payout_entity.loc[self.payout_entity['source'] == 'Insurance_Company'].groupby('payoutEntity')['clinic'].apply(list).to_dict()
             self._clinic_dict = self.payout_entity.loc[self.payout_entity['source'] == 'Clinic'].groupby('payoutEntity')['clinic'].apply(list).to_dict()
             self._entity_dicts_cached = True
-        return self._payout_entity_source, self._ic_dict, self._clinic_dict
+        return self._payout_entity_source, self._fb_dict, self._clinic_dict
 
     def load_preprocess_database(self, ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        errand = fetchFromDB(self.errand_pay_query.format(CONDITION=""))
+        errand = fetchFromDB(self.errand_pay_query)
         errand = tz_convert(errand, 'createdAt')
         errand['settlementAmount'] = errand['settlementAmount'].fillna(0).astype(float)
    
@@ -95,6 +95,7 @@ class PaymentService(BaseService):
     def init_payment(self, pay: pd.DataFrame) -> pd.DataFrame:
         """Process payment data - extract references and initialize columns"""
         pay = tz_convert(pay, 'createdAt')
+            
         mask = pay['reference'].notna()
         if mask.any():
             pay.loc[mask,'extractReference'] = pay.loc[mask,'reference'].apply(lambda x: ''.join(self.ref_reg.findall(x)) if isinstance(x, str) else None)
@@ -131,14 +132,14 @@ class PaymentService(BaseService):
                 if match:
                     matched_value = match.group(1).strip()
                     if col not in row_pay or pd.isna(row_pay.get(col)):
-                        pay.at[idx, col] = matched_value
+                        pay.at[idx, col] = matched_value  # type: ignore
                     else:
                         # Ensure isReference is a list
-                        current_val = pay.at[idx, 'isReference']
+                        current_val = pay.at[idx, 'isReference']  # type: ignore
                         if not isinstance(current_val, list):
                             current_val = [] if pd.isna(current_val) else [current_val]
                         current_val.append(matched_value)
-                        pay.at[idx, 'isReference'] = current_val
+                        pay.at[idx, 'isReference'] = current_val  # type: ignore
                                 
         # Clean up duplicates
         pay.loc[pay['extractDamageNumber'] == pay['extractOtherNumber'], 'extractDamageNumber'] = None
@@ -156,14 +157,14 @@ class PaymentService(BaseService):
             if qty > 0:
                 pay.at[idx, 'insuranceCaseId'].extend(matched_ic_ids)  # type: ignore 
                 links = self._generate_links(row_pay['insuranceCaseId'], row_pay['val_errand'], 'ic.id')
-                pay.at[idx, 'referenceLink'] = links
+                pay.at[idx, 'referenceLink'] = links  # type: ignore  # type: ignore
                 if qty == 1:
-                    pay.at[idx, 'status'] = f"One DR matched perfectly (reference: {', '.join(links)})."
+                    pay.at[idx, 'status'] = f"One DR matched perfectly (reference: {', '.join(links)})."  # type: ignore
                 else:
-                    pay.at[idx, 'status'] = (f"Found {qty} matching DRs (references: {', '.join(links)}) "
-                                             f"and the payment amount matches each one.")
+                    pay.at[idx, 'status'] = (f"Found {qty} matching DRs (references: {', '.join(links)}) " # type: ignore
+                                             f"and the payment amount matches each one.")  
             else:
-                pay.at[idx, 'status'] = 'No Found'
+                pay.at[idx, 'status'] = 'No Found'  # type: ignore
         
         return pay
     
@@ -265,79 +266,173 @@ class PaymentService(BaseService):
                 links.append(f'{ref} (No Corresponding Link)')
         return links
 
+    # def reminder_unmatched_amount(self, pay: pd.DataFrame) -> pd.DataFrame:
+    #     mask = (pay['status'].isin(["No Found",""]))
+    #     for idx, row_pay in pay.loc[mask].iterrows():
+    #         matched_ic_ids, isReference, links = [], [], []
+    #         ref_amount_dict = {}
+    #         msg = "No Found"
+            
+    #         # Collect all possible references
+    #         if (len(row_pay['isReference']) > 0):
+    #             for ref in row_pay['isReference']:
+    #                 if ref not in isReference:
+    #                     isReference.append(ref)
+            
+    #         if pd.notna(row_pay['extractReference']) and (len(row_pay['extractReference']) == 10) and (row_pay['extractReference'] not in isReference):
+    #             isReference.append(str(row_pay['extractReference']))                 
+    #         if pd.notna(row_pay['extractOtherNumber']) and (len(row_pay['extractOtherNumber']) == 10) and (row_pay['extractOtherNumber'] not in isReference):
+    #             isReference.append(str(row_pay['extractOtherNumber']))
+    #         if pd.notna(row_pay['extractDamageNumber']) and (len(row_pay['extractDamageNumber']) == 10) and (row_pay['extractDamageNumber'] not in isReference):
+    #             isReference.append(str(row_pay['extractDamageNumber']))
+                
+    #         if len(isReference) > 0:
+    #             condition_sql = f"""AND ic.reference IN ({', '.join([f"'{ref}'" for ref in set(isReference)])})"""  
+    #             sub_errand = fetchFromDB(self.errand_pay_query.format(CONDITION=condition_sql))
+
+    #             sub_errand.loc[sub_errand['settlementAmount'].isna(), 'settlementAmount'] = 0
+    #             if not sub_errand.empty:
+    #                 for _, row_sub in sub_errand.iterrows():
+    #                     if row_sub['insuranceCaseId'] not in matched_ic_ids:
+    #                         if row_sub['settlementAmount'] == row_sub['paymentFromFB']:
+    #                             settlement_amount = row_sub['settlementAmount'] if pd.notna(row_sub['settlementAmount']) else 0
+    #                         else:
+    #                             ref = row_sub['isReference']
+    #                             ref_amount_dict[str(row_sub['isReference'])] = row_sub['paymentFromFB']
+                            
+    #                         pay.at[idx, 'settlementAmount'] += float(settlement_amount)  # type: ignore
+    #                         matched_ic_ids.append(row_sub['insuranceCaseId'])
+                            
+    #                     if str(row_sub['isReference']) not in [str(ref) for ref in pay.at[idx, 'isReference']]:  # type: ignore
+    #                         pay.at[idx, 'isReference'].append(str(row_sub['isReference']))  # type: ignore
+    #                         pay.at[idx, 'val_pay'].append(str(row_sub['isReference']))  # type: ignore
+                            
+    #                     if str(row_sub['isReference']) not in ref_amount_dict:
+    #                         settlement_amount = row_sub['settlementAmount'] if pd.notna(row_sub['settlementAmount']) else 0
+    #                         ref_amount_dict[str(row_sub['isReference'])] = float(settlement_amount)
+
+    #         ref_list = pay.at[idx, 'isReference']  # type: ignore
+    #         val_errand_list = pay.at[idx, 'val_pay']  # type: ignore
+    #         links = self._generate_links(ref_list, val_errand_list, 'ic.reference') # type: ignore
+    #         pay.at[idx, 'referenceLink'] = links  # type: ignore
+            
+    #         qty = len(matched_ic_ids)
+    #         if qty > 0:
+    #             total_settlement_amount = pay.at[idx, 'settlementAmount']  # type: ignore
+    #             row_payment_amount = row_pay['amount']
+
+    #             if row_payment_amount == total_settlement_amount:
+    #                 if qty == 1:
+    #                     msg = f"One DR matched perfectly (reference: {', '.join(links)})."
+    #                 else:       
+    #                     msg = (f"Found {qty} matching DRs (references: {', '.join(links)}), "
+    #                            f"and the total amount matches the payment.")
+    #             else:
+    #                 matched_references = self._partly_amount_matching(ref_amount_dict, row_payment_amount)
+    #                 if matched_references:
+    #                     matched_links = [link for link in links if any(ref in link for ref in matched_references)]
+    #                     if len(matched_references) == 1:
+    #                         msg = f"One DR matched perfectly (reference: {', '.join(links)})."
+    #                     else:
+    #                         msg = f"Found {len(matched_references)} matching DRs (references: {', '.join(matched_links)}), and the total amount matches the payment."
+    #                 else:
+    #                     if qty == 1:
+    #                         msg = f"Found 1 relevant DR (reference: {', '.join(links)}), but the amount does not match."
+    #                     else:
+    #                         msg = f"Found {qty} relevant DRs (references: {', '.join(links)}), but the amounts do not match."
+
+    #         pay.at[idx, 'status'] = msg  # type: ignore
+
+    #     return pay   
+  
     def reminder_unmatched_amount(self, pay: pd.DataFrame) -> pd.DataFrame:
+        """Handle partial payments from FB - new implementation for multiple lines per reference"""
         mask = (pay['status'].isin(["No Found",""]))
         for idx, row_pay in pay.loc[mask].iterrows():
             matched_ic_ids, isReference, links = [], [], []
             ref_amount_dict = {}
             msg = "No Found"
-            
+
             # Collect all possible references
             if (len(row_pay['isReference']) > 0):
                 for ref in row_pay['isReference']:
                     if ref not in isReference:
                         isReference.append(ref)
-            
+
             if pd.notna(row_pay['extractReference']) and (len(row_pay['extractReference']) == 10) and (row_pay['extractReference'] not in isReference):
-                isReference.append(str(row_pay['extractReference']))                 
+                isReference.append(str(row_pay['extractReference']))
             if pd.notna(row_pay['extractOtherNumber']) and (len(row_pay['extractOtherNumber']) == 10) and (row_pay['extractOtherNumber'] not in isReference):
                 isReference.append(str(row_pay['extractOtherNumber']))
             if pd.notna(row_pay['extractDamageNumber']) and (len(row_pay['extractDamageNumber']) == 10) and (row_pay['extractDamageNumber'] not in isReference):
                 isReference.append(str(row_pay['extractDamageNumber']))
-                
+
             if len(isReference) > 0:
-                condition_sql = f"""AND ic.reference IN ({', '.join([f"'{ref}'" for ref in set(isReference)])})"""  
-                sub_errand = fetchFromDB(self.errand_pay_query.format(CONDITION=condition_sql))
+                condition_sql = f"""AND ic.reference IN ({', '.join([f"'{ref}'" for ref in set(isReference)])})"""
+                sub_errand = fetchFromDB(self.partial_pay_query.format(CONDITION=condition_sql))
 
-                sub_errand.loc[sub_errand['settlementAmount'].isna(), 'settlementAmount'] = 0
                 if not sub_errand.empty:
-                    for _, row_sub in sub_errand.iterrows():
-                        if row_sub['insuranceCaseId'] not in matched_ic_ids:
-                            settlement_amount = row_sub['settlementAmount'] if pd.notna(row_sub['settlementAmount']) else 0
-                            pay.at[idx, 'settlementAmount'] += float(settlement_amount)
-                            matched_ic_ids.append(row_sub['insuranceCaseId'])
-                            
-                        if str(row_sub['isReference']) not in [str(ref) for ref in pay.at[idx, 'isReference']]:
-                            pay.at[idx, 'isReference'].append(str(row_sub['isReference']))  # type: ignore
-                            pay.at[idx, 'val_pay'].append(str(row_sub['isReference']))  # type: ignore
-                            
-                        if str(row_sub['isReference']) not in ref_amount_dict:
-                            settlement_amount = row_sub['settlementAmount'] if pd.notna(row_sub['settlementAmount']) else 0
-                            ref_amount_dict[str(row_sub['isReference'])] = float(settlement_amount)
+                    sub_errand = tz_convert(sub_errand, 'paymentReceivedTime')
+                    sub_errand.loc[sub_errand['settlementAmount'].isna(), 'settlementAmount'] = 0
+                    sub_errand.loc[sub_errand['paymentFromFB'].isna(), 'paymentFromFB'] = 0
 
-            ref_list = pay.at[idx, 'isReference']
-            val_errand_list = pay.at[idx, 'val_pay']
-            links = self._generate_links(ref_list, val_errand_list, 'ic.reference')
-            pay.at[idx, 'referenceLink'] = links
-            
+                    mask_full_pay = (sub_errand['createdAt'] <= row_pay['createdAt'])
+                    mask_partial_pay = (sub_errand['paymentReceivedTime'] <= row_pay['createdAt'])
+                    if mask_partial_pay.any():
+                        sub_errand = sub_errand.loc[mask_partial_pay]
+                    else:
+                        sub_errand = sub_errand.loc[mask_full_pay]
+
+                    ref_groups = sub_errand.groupby('isReference')
+                    for ref, group_df in ref_groups:
+                        if str(ref) not in [str(r) for r in pay.at[idx, 'isReference']]:  # type: ignore
+                            pay.at[idx, 'isReference'].append(str(ref))  # type: ignore
+                            pay.at[idx, 'val_pay'].append(str(ref))  # type: ignore
+
+                        # Calculate total payments from FB for this reference
+                        total_fb_payment = group_df['paymentFromFB'].fillna(0).sum()
+                        total_settlement = group_df['settlementAmount'].fillna(0).iloc[0]  
+
+                        # Store the remaining amount (settlement - total FB payments)
+                        remaining_amount = total_settlement - total_fb_payment
+                        ref_amount_dict[str(ref)] = max(0, remaining_amount)  
+                        pay.at[idx, 'settlementAmount'] += float(remaining_amount)  # type: ignore
+                        for ic_id in group_df['insuranceCaseId'].unique():
+                            if ic_id not in matched_ic_ids:
+                                matched_ic_ids.append(ic_id)
+
+            ref_list = pay.at[idx, 'isReference']  # type: ignore
+            val_errand_list = pay.at[idx, 'val_pay']  # type: ignore
+            links = self._generate_links(ref_list, val_errand_list, 'ic.reference')  # type: ignore
+            pay.at[idx, 'referenceLink'] = links  # type: ignore
+
             qty = len(matched_ic_ids)
             if qty > 0:
-                total_settlement_amount = pay.at[idx, 'settlementAmount']
+                total_settlement_amount = pay.at[idx, 'settlementAmount']  # type: ignore
                 row_payment_amount = row_pay['amount']
 
                 if row_payment_amount == total_settlement_amount:
                     if qty == 1:
                         msg = f"One DR matched perfectly (reference: {', '.join(links)})."
-                    else:       
+                    else:
                         msg = (f"Found {qty} matching DRs (references: {', '.join(links)}), "
-                               f"and the total amount matches the payment.")
+                               f"and the total remaining amount matches the payment.")
                 else:
                     matched_references = self._partly_amount_matching(ref_amount_dict, row_payment_amount)
                     if matched_references:
                         matched_links = [link for link in links if any(ref in link for ref in matched_references)]
                         if len(matched_references) == 1:
-                            msg = f"One DR matched perfectly (reference: {', '.join(links)})."
+                            msg = f"One DR matched perfectly (reference: {', '.join(matched_links)})."
                         else:
-                            msg = f"Found {len(matched_references)} matching DRs (references: {', '.join(matched_links)}), and the total amount matches the payment."
+                            msg = f"Found {len(matched_references)} matching DRs (references: {', '.join(matched_links)}), and the total remaining amount matches the payment."
                     else:
                         if qty == 1:
-                            msg = f"Found 1 relevant DR (reference: {', '.join(links)}), but the amount does not match."
+                            msg = f"Found 1 relevant DR (reference: {', '.join(links)}), but the remaining amount does not match."
                         else:
-                            msg = f"Found {qty} relevant DRs (references: {', '.join(links)}), but the amounts do not match."
+                            msg = f"Found {qty} relevant DRs (references: {', '.join(links)}), but the remaining amounts do not match."
 
-            pay.at[idx, 'status'] = msg
+            pay.at[idx, 'status'] = msg  # type: ignore
 
-        return pay   
+        return pay
 
     def _partly_amount_matching(self, ref_amount_dict: Dict[str, float], target_amount: float) -> Optional[List[str]]:
         """Find combinations of references that match the target amount"""
@@ -390,7 +485,7 @@ class PaymentService(BaseService):
             if source == 'Insurance_Company':
                 fb_list = fb_dict.get(rowPay['bankName'], [])
                 if not fb_list:
-                    pay.at[idx, 'status'] = "No Found"
+                    pay.at[idx, 'status'] = "No Found"  # type: ignore
                     continue
 
                 fb_lower_list = [x.lower() for x in fb_list if isinstance(x, str)]
@@ -399,12 +494,12 @@ class PaymentService(BaseService):
             elif source == 'Clinic':
                 clinic_list = clinic_dict.get(rowPay['bankName'], [])
                 if not clinic_list:
-                    pay.at[idx, 'status'] = "No Found"
+                    pay.at[idx, 'status'] = "No Found"  # type: ignore
                     continue
                 clinic_lower_list = [x.lower() for x in clinic_list if isinstance(x, str)]
                 entity_matched = errand.loc[(errand_date <= rowPay['createdAt']) & (clinic_lower.isin(clinic_lower_list))]
             else:
-                pay.at[idx, 'status'] = "No Found"
+                pay.at[idx, 'status'] = "No Found"  # type: ignore
                 continue
 
             qty = len(entity_matched)
@@ -446,7 +541,7 @@ class PaymentService(BaseService):
             else:
                 msg = "No Found"
 
-            pay.at[idx, 'status'] = msg
+            pay.at[idx, 'status'] = msg  # type: ignore
 
         return pay
  
@@ -488,19 +583,19 @@ class PaymentService(BaseService):
 
             qty = len(matched_trans_ids)
             if qty == 1:
-                pay.at[idx, 'status'] = (f"Payment has been paid out<br>"
+                pay.at[idx, 'status'] = (f"Payment has been paid out<br>"  # type: ignore
                                          f"             TransactionId: {list(matched_trans_ids)[0]}<br>"
                                          f"             Amount: {row_pay['amount'] / 100:.2f} kr<br>"
                                          f"             Clinic Name: {list(matched_clinic_name)[0]}<br>"
                                          f"             Type: {list(matched_type)[0] if matched_type else ''}")
             elif qty > 0:
-                pay.at[idx, 'status'] = (f"Payment has been paid out {qty} times<br>"
+                pay.at[idx, 'status'] = (f"Payment has been paid out {qty} times<br>"  # type: ignore
                                          f"    TransactionId:{' '.join(map(str, sorted(matched_trans_ids)))}<br>"
                                          f"           Amount: {row_pay['amount'] / 100:.2f} kr<br>"
                                          f"      Clinic Name: {' '.join(sorted(matched_clinic_name))}<br>"
                                          f"             Type: {' '.join(sorted(matched_type))}")
             else:
-                pay.at[idx, 'status'] = 'No matching DRs found.'   
+                pay.at[idx, 'status'] = 'No matching DRs found.'  # type: ignore   
 
         return pay
 
