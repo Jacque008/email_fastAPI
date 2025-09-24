@@ -78,7 +78,6 @@ class Classifier(BaseService):
                         AND ecr."timestamp" < '{infoDate}'::timestamptz
                         AND e.subject = '{safe_subject}'""" )
         isFirst = fetchFromDB(self.info_query.format(CONDITION=condition))
-        # isFirst['timestamp'] = pd.to_datetime(isFirst['timestamp'], utc=True).dt.tz_convert('Europe/Stockholm')
         isFirst = tz_convert(isFirst, 'timestamp')
     
         if isFirst.empty:

@@ -41,7 +41,6 @@ class PaymentDataset:
 
         pay = self.services.init_payment(pay_df.copy())
         pay = self.services.parse_info(pay)
-        
         errand, payout = self.services.load_preprocess_database()
         if not errand.empty:
             pay = self.services.match_by_info(pay, errand)

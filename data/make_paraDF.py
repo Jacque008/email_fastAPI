@@ -462,38 +462,68 @@ queryDict = {
                   FROM bankgiro_payment_file_line bpfl
                   WHERE id = {ID}
                   ORDER BY "createdAt" DESC;'''],
-  'errandPay': [''' SELECT 
+  'errandPay': [''' SELECT DISTINCT
                         er.id AS "errandId",
                         er."createdAt" ,
-                        er.reference AS "errandNumber" ,                        
+                        er.reference AS "errandNumber" ,
                         ic.id AS "insuranceCaseId" ,
                         ic.reference AS "isReference",
                         ls."settlementAmount", 
                         ic."damageNumber" ,
                         er."invoiceReference" ,
-                        er."ocrNumber"  ,
+                        er."ocrNumber" ,
                         c."name" AS "clinicName" ,
                         fb."name" AS "insuranceCompanyName" ,
-                        ic."animalId"
-                    FROM errand er 
-                    INNER JOIN errand_status es ON er."statusId" = es.id
-                    INNER JOIN insurance_case ic ON ic."errandId" = er.id
-                    INNER JOIN clinic c ON er."clinicId" = c.id 
-                    INNER JOIN insurance_company_email ice ON ic."insuranceCompanyEmailId" = ice.id 
-                    INNER JOIN insurance_company fb ON ice."insuranceCompanyId" = fb.id
-                    INNER JOIN (SELECT DISTINCT 
-                                    ist."insuranceCaseId",
-                                    ist."settlementAmount"
-                                FROM insurance_settlement ist
-                                WHERE ist."updatedAt" = (
-                                      SELECT MAX(inst."updatedAt")
-                                      FROM insurance_settlement inst
-                                      WHERE inst."insuranceCaseId" = ist."insuranceCaseId")
-                                ) AS ls ON ls."insuranceCaseId" = ic.id
-                    WHERE es.cancelled = False
-                          AND es.complete IS FALSE
-                          {CONDITION}
+                        ic."animalId" 
+                    FROM errand er
+                    JOIN errand_status es ON er."statusId" = es.id
+                    JOIN insurance_case ic ON ic."errandId" = er.id
+                    JOIN clinic c ON er."clinicId" = c.id 
+                    JOIN insurance_company_email ice ON ic."insuranceCompanyEmailId" = ice.id 
+                    JOIN insurance_company fb ON ice."insuranceCompanyId" = fb.id
+                    JOIN (SELECT DISTINCT 
+                                is2."insuranceCaseId",
+                                is2."settlementAmount"
+                            FROM insurance_settlement is2
+                            WHERE is2."updatedAt" = (
+                                SELECT MAX(is3."updatedAt")
+                                FROM insurance_settlement is3
+                                WHERE is3."insuranceCaseId" = is2."insuranceCaseId")
+                          ) AS ls ON ls."insuranceCaseId" = ic.id
+                    WHERE es.complete IS FALSE
                     ORDER BY er."createdAt" DESC;'''],
+  'partialPay': [''' SELECT DISTINCT
+                      er.id AS "errandId",
+                      er."createdAt" ,
+                      ic.id AS "insuranceCaseId" ,
+                      ic.reference AS "isReference",
+                      ls."settlementAmount",
+                      tl."createdAt" AS "paymentReceivedTime" ,
+                      ABS(tl.amount) AS "paymentFromFB"
+                  FROM errand er
+                  JOIN insurance_case ic ON ic."errandId" = er.id
+                  JOIN (SELECT DISTINCT 
+                              is2."insuranceCaseId",
+                              is2."settlementAmount"
+                          FROM insurance_settlement is2
+                          WHERE is2."updatedAt" = (
+                              SELECT MAX(is3."updatedAt")
+                              FROM insurance_settlement is3
+                              WHERE is3."insuranceCaseId" = is2."insuranceCaseId")
+                        ) AS ls ON ls."insuranceCaseId" = ic.id
+                  JOIN "transaction" t ON t."errandId" = er.id
+                  JOIN transaction_line tl ON tl."transactionId" = t.id
+                  JOIN account a ON a.id = tl."accountId"
+                  WHERE t.type_ IN ('settlement_payment','settlement') AND
+                        (t.type_ = 'settlement_payment'
+                        OR (t.type_ = 'settlement' AND NOT EXISTS ( 
+                            SELECT 1
+                            FROM "transaction" tt
+                            WHERE tt."errandId" = t."errandId"
+                              AND tt.type_ = 'settlement_payment')))
+                        AND a."ownerType" = 'insurance_company'
+                        {CONDITION}
+                  ORDER BY er."createdAt" DESC;'''],
   'errandLink': ['''  SELECT DISTINCT
                           ic.id,
                           er.reference AS "errandNumber",
