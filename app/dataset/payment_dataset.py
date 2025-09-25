@@ -1,74 +1,74 @@
 from __future__ import annotations
-from typing import List
 import pandas as pd
 from dataclasses import dataclass, field
-from ..schemas.payment import PaymentIn, PaymentOut
+from typing import Optional
 from ..services.payment import PaymentService
-from ..services.utils import model_to_dataframe, dataframe_to_model
 
 
 @dataclass
 class PaymentDataset:
-    """Dataset class that chains all atomic functions for payment matching - optimized"""
+    """Dataset class for payment matching - follows DataFrame-first pattern like EmailDataset"""
+    df: pd.DataFrame = field(default_factory=pd.DataFrame)
+    services: Optional[PaymentService] = field(default=None)
 
-    @property
-    def services(self):
-        if not hasattr(self, '_services'):
-            self._services = PaymentService()
-        return self._services
+    def __post_init__(self):
+        """Initialize services after dataclass creation"""
+        if self.services is None:
+            self.services = PaymentService(self.df)
 
-    def match_payments(self, payments: List[PaymentIn]) -> List[PaymentOut]:
+    def do_match(self) -> pd.DataFrame:
         """
-        Optimized payment matching using vectorized operations
-        
-        Args:
-            payments: List of PaymentIn objects to process
-            
+        Perform payment matching on internal DataFrame using fluent API
+
         Returns:
-            List of PaymentOut objects with matching results
+            DataFrame with matching results
         """
-        if not payments:
-            return []
+        if self.df.empty:
+            return pd.DataFrame()
 
-        pay_df = model_to_dataframe(payments)
-        result_df = self._chain_process(pay_df)
-        
-        return dataframe_to_model(result_df, PaymentOut)
-    
+        if self.services is None:
+            self.services = PaymentService(self.df)
 
-    def _chain_process(self, pay_df: pd.DataFrame) -> pd.DataFrame:
-        """Chain all atomic functions following original Flask logic with performance optimizations"""
-
-        pay = self.services.init_payment(pay_df.copy())
-        pay = self.services.parse_info(pay)
+        # Load database data first
         errand, payout = self.services.load_preprocess_database()
-        if not errand.empty:
-            pay = self.services.match_by_info(pay, errand)
-            pay = self.services.reminder_unmatched_amount(pay)
-            pay = self.services.match_entity_and_amount(pay, errand)
-        if not payout.empty:
-            pay = self.services.match_payout(pay, payout)
 
+        # Process using full fluent API chain
+        self.services.payment_df = self.df
+        processed_service = (self.services
+                           .init_payment()
+                           .parse_info())
+
+        # Chain errand matching if available
+        if not errand.empty:
+            processed_service = (processed_service
+                               .match_by_info(errand)
+                               .reminder_unmatched_amount()
+                               .match_entity_and_amount(errand))
+
+        # Chain payout matching if available
+        if not payout.empty:
+            processed_service = processed_service.match_payout(payout)
+
+        # Get result and format amount
+        pay = processed_service.get_result()
         pay['amount'] = pay['amount'].apply(lambda x: f"{x / 100:.2f} kr")
-        
+
         return pay
     
-    
-    def matching_statistics(self, payments: List[PaymentIn]) -> dict:
+    def get_statistics(self) -> dict:
         """
-        Get matching statistics for a set of payments - optimized
-        
-        Args:
-            payments: List of PaymentIn objects to analyze
-            
+        Get matching statistics for processed payments DataFrame
+
         Returns:
             Dictionary with matching statistics
         """
-        if not payments:
+        if self.df.empty:
             return {}
-            
-        # Process payments once and get results
-        pay_df = model_to_dataframe(payments)
-        result_df = self._chain_process(pay_df)
-        
+
+        # Process the internal DataFrame and get statistics
+        result_df = self.do_match()
+        if self.services is None:
+            return {}
         return self.services.statistics(result_df)
+
+    # Removed legacy matching_statistics method - API layer handles Pydantic conversions

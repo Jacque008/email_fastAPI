@@ -1,10 +1,10 @@
 [
-    {
-        "id":54314,
-        "amount":512600,
-        "reference":"1000636090",
-        "info":null,
-        "bankName":"LASSIE AB",
-        "createdAt":1743682986367
-    }
+	{
+		"id" : 63944,
+		"amount" : 116900,
+		"reference" : "",
+		"info" : "SKADENUMMER: 254702101\n\nFAKTURA\n\n1000740488\n\nVID FÖRFRÅGAN KONTAKTA\n\nIf\n",
+		"bankName" : "IF SKADEFÖRSÄKRING AB (PUBL)",
+		"createdAt" : "2025-09-01 14:28:59.885 +0200"
+	}
 ]

@@ -15,7 +15,7 @@ from .resolver import SenderResolver, ReceiverResolver, StaffResolver, AddressRe
 from .extractor import Extractor
 from .connector import Connector
 from .classifier import Classifier
-from .forwarder import Forwarder
+from .forward import ForwardService
 from .summary import SummaryService
 
 
@@ -29,7 +29,7 @@ class DefaultServices:
     _extractor: Optional["Extractor"] = field(default=None, init=False, repr=False)
     _connector: Optional["Connector"] = field(default=None, init=False, repr=False)
     _classifier: Optional["Classifier"] = field(default=None, init=False, repr=False)
-    _forwarder: Optional["Forwarder"] = field(default=None, init=False, repr=False)
+    _forwarder: Optional["ForwardService"] = field(default=None, init=False, repr=False)
     _addressResolver: Optional["AddressResolver"] = field(default=None, init=False, repr=False)
     _summary_service: Optional["SummaryService"] = field(default=None, init=False, repr=False)
         
@@ -75,7 +75,7 @@ class DefaultServices:
     
     def get_forwarder(self):
         if self._forwarder is None:
-            self._forwarder = Forwarder()
+            self._forwarder = ForwardService()
         return self._forwarder
     
     def get_addressResolver(self):

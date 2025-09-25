@@ -2,7 +2,7 @@ from __future__ import annotations
 import pandas as pd
 from dataclasses import dataclass, field
 from typing import Optional
-from ..services.services import DefaultServices
+from ...app.services.services import DefaultServices
 
 @dataclass
 class ErrandDataset:

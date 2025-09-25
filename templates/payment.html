@@ -48,6 +48,10 @@
                 <p style="margin: 5px 0;">Perfekt matchade ({{ "%.1f"|format(statistics.perfect_rate) }}%)</p>
             </div>
             <div style="background-color: white; padding: 15px; border-radius: 5px; text-align: center;">
+                <h3 style="color: #fd7e14; margin: 0;">{{ statistics.relevant_matched }}</h3>
+                <p style="margin: 5px 0;">Relevanta ({{ "%.1f"|format(statistics.relevant_rate) }}%)</p>
+            </div>
+            <div style="background-color: white; padding: 15px; border-radius: 5px; text-align: center;">
                 <h3 style="color: #ffc107; margin: 0;">{{ statistics.paid_out }}</h3>
                 <p style="margin: 5px 0;">Utbetalda ({{ "%.1f"|format(statistics.paid_out_rate) }}%)</p>
             </div>
