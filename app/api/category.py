@@ -68,8 +68,8 @@ async def process_category_emails(
                 })
         
         try:
-            email_df = pd.DataFrame([e.model_dump(by_alias=True) for e in emails])            
-            ds = EmailDataset(df=email_df, services=DefaultServices())
+            email_df = pd.DataFrame([e.model_dump(by_alias=True) for e in emails])
+            ds = EmailDataset(df=email_df)
             processed_df = ds.do_connect()
 
         except Exception as debug_error:
@@ -143,9 +143,7 @@ async def category_api(emails: List[EmailIn]):
     try:
         email_df = pd.DataFrame([e.model_dump(by_alias=True) for e in emails])
 
-        services = DefaultServices()
-
-        ds = EmailDataset(df=email_df, services=services)
+        ds = EmailDataset(df=email_df)
 
         processed_df = ds.do_connect()
         

@@ -45,9 +45,8 @@ class Connector(Processor):
         unmatched_mask = df['errandId'].apply(lambda x: len(x) == 0 if isinstance(x, (list, tuple)) else not x)
         if unmatched_mask.any():
             sub = df.loc[unmatched_mask].copy() 
-            applied = sub.apply(lambda row: self._find_match_for_single_email(row, errands), axis=1)
-            applied = pd.DataFrame.from_records(applied)  # type: ignore
-            
+            applied = sub.apply(lambda row: self._find_match_for_single_email(row, errands), axis=1, result_type='expand')
+
             errand_matched = applied.get('errand_matched', pd.Series(False, index=applied.index))
             hit_mask = errand_matched.eq(True) if isinstance(errand_matched, pd.Series) else errand_matched == True
             hit_idx = applied.index[hit_mask]
@@ -147,34 +146,34 @@ class Connector(Processor):
         # if not mask.any():
         return cand[mask]
 
-    def _find_match_for_single_email(self, email_row: pd.Series, errand: pd.DataFrame) -> pd.Series:  
+    def _find_match_for_single_email(self, email_row: pd.Series, errand: pd.DataFrame) -> Dict[str, Any]:
         matched_errand, connected_col, note = self._match_by_reference(email_row, errand)
-        if matched_errand is not None:   
+        if matched_errand is not None:
             result_dict = self._fill_back_result(email_row, matched_errand, connected_col or "", note or "")
-            return pd.Series(result_dict)
-        
+            return result_dict
+
         cand = self._filter_candidate_errand(email_row, errand)
-        
+
         if not cand.empty:
             matched_errand, connected_col, note = self._match_by_number(email_row, cand)
             if matched_errand is None:
                 matched_errand, connected_col, note = self._match_by_name(email_row, cand)
             if matched_errand is not None:
                 result_dict = self._fill_back_result(email_row, matched_errand, connected_col or "", note or "")
-                return pd.Series(result_dict)
-        
+                return result_dict
+
         # Return original email data with unmatched status
         # Preserve original errandId if it exists
         cur_ids = email_row.get('errandId')
         if not isinstance(cur_ids, list):
             cur_ids = [] if pd.isna(cur_ids) else [cur_ids]
-        
+
         result = {
             "errand_matched": False,
             "errandId": cur_ids
         }
-        
-        return pd.Series(result)
+
+        return result
         
     def _match_by_reference(self, email_row: pd.Series, errand: pd.DataFrame) -> Tuple[Optional[pd.Series], Optional[str], Optional[str]]:
         ref = email_row.get('reference')

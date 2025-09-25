@@ -1,5 +1,5 @@
 """
-Forwarder Service - Handle content generation for email forwarding
+Forward Service - Handle content generation for email forwarding
 Extracted from workflow/create_forwarding.py
 """
 import regex as reg
@@ -12,7 +12,7 @@ from .base_service import BaseService
 from .utils import truncate_text, base_match
 
 @dataclass
-class Forwarder(BaseService):
+class ForwardService(BaseService):
     """Content generator service for email forwarding"""
     request_fw_sub: List[str] = field(default_factory=list)
 

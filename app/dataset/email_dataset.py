@@ -3,6 +3,14 @@ import pandas as pd
 from dataclasses import dataclass, field
 from typing import Sequence
 from ..services.services import DefaultServices
+from ..services.processor import Processor
+from ..services.parser import Parser
+from ..services.resolver import SenderResolver, ReceiverResolver, StaffResolver
+from ..services.extractor import Extractor
+from ..services.classifier import Classifier
+from ..services.connector import Connector
+
+
 
 @dataclass
 class EmailDataset:
@@ -12,6 +20,16 @@ class EmailDataset:
     """
     df: pd.DataFrame
     services: DefaultServices = field(default_factory=DefaultServices)
+
+    # Services initialized in __post_init__
+    processor: Processor = field(init=False)
+    parser: Parser = field(init=False)
+    sender_detector: SenderResolver = field(init=False)
+    receiver_detector: ReceiverResolver = field(init=False)
+    staff_detector: StaffResolver = field(init=False)
+    extractor: Extractor = field(init=False)
+    classifier: Classifier = field(init=False)
+    connector: Connector = field(init=False)
     
     # Standard return columns for preprocessing
     RETURN_COLS: Sequence[str] = (
@@ -22,6 +40,7 @@ class EmailDataset:
     )
 
     def __post_init__(self):
+        """Initialize all services after dataclass creation"""
         self.processor = self.services.get_processor()
         self.parser = self.services.get_parser()
         self.sender_detector = self.services.get_sender_detector()
@@ -31,39 +50,8 @@ class EmailDataset:
         self.classifier = self.services.get_classifier()
         self.connector = self.services.get_connector()
     
-    def adjust_time(self) -> "EmailDataset":
-        self.df = self.processor.adjust_time_format(self.df)
-        return self
-    
-    def generate_content(self) -> "EmailDataset":
-        self.df = self.processor.generate_email_content(self.df)
-        return self
-
-    def detect_sender(self) -> "EmailDataset":
-        self.df = self.sender_detector.detect_sender(self.df)
-        return self
-
-    def detect_receiver(self) -> "EmailDataset":
-        self.df = self.receiver_detector.detect_receiver(self.df)
-        return self
-
-    def handle_vendor_specials(self) -> "EmailDataset":
-        """Applies parser vendor-specific fixes (Provet Cloud, Wisentic)."""
-        self.df = self.parser.handle_provet_cloud(self.df)
-        self.df = self.parser.handle_wisentic(self.df)
-        if 'reference' in self.df.columns:
-            self.df['insuranceCaseRef'] = self.df['reference']
-        
-        return self
-
-    # --- Extraction --------------------------------------------------------
-    def extract_attachments(self) -> "EmailDataset":
-        self.df = self.extractor.extract_numbers_from_attach(self.df)
-        return self
-    
-    def extract_emails(self) -> "EmailDataset":
-        self.df = self.extractor.extract_numbers_from_email(self.df)
-        return self
+    # All wrapper methods and FluentService removed - use direct service calls
+    # Example: ds.processor.adjust_time_format(df)
 
 
     def refine_finalize(self) -> pd.DataFrame:
@@ -85,12 +73,10 @@ class EmailDataset:
         Preprocess emails: adjust_time_format -> detect_sender -> generate_email_content
         -> detect_receiver -> return
         """
-        (self
-            .adjust_time()              
-            .detect_sender()
-            .generate_content()  
-            .detect_receiver()
-        )     
+        self.df = self.processor.adjust_time_format(self.df)
+        self.df = self.sender_detector.detect_sender(self.df)
+        self.df = self.processor.generate_email_content(self.df)
+        self.df = self.receiver_detector.detect_receiver(self.df)
 
         return self
     
@@ -99,15 +85,18 @@ class EmailDataset:
         Preprocess emails: adjust_time_format -> detect_sender -> generate_email_content
         -> detect_receiver -> vendor specials -> sort -> filter columns -> return
         """
-        (self.process_emails()
-            .handle_vendor_specials()
-            .sort_by_date(ascending=True))
-        
+        self.process_emails()
+        self.df = self.parser.handle_provet_cloud(self.df)
+        self.df = self.parser.handle_wisentic(self.df)
+        if 'reference' in self.df.columns:
+            self.df['insuranceCaseRef'] = self.df['reference']
+        self.sort_by_date(ascending=True)
+
         # Ensure all required columns exist
         for col in self.RETURN_COLS:
             if col not in self.df.columns:
-                self.df[col] = None        
-        
+                self.df[col] = None
+
         # Filter to only return required columns
         return self.df[list(self.RETURN_COLS)]
     
