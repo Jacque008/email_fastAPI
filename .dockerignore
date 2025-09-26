@@ -98,6 +98,6 @@ data/*.py
 # requirements.txt
 
 # Sample data
-sample_*.json
+sample-*.json
 test.ipynb
 spare/

@@ -98,8 +98,6 @@ class LogDataset:
                 results.append(error_result)
 
         return pd.DataFrame(results)
-
-    # Removed generate_chronological_log - API layer handles all Pydantic conversions
     
     def _generate_all_log_components(self, base_data: pd.DataFrame) -> List[pd.DataFrame]:
         """
@@ -165,24 +163,22 @@ class LogDataset:
         
         return components
     
-    def do_batch_logs(self, log_df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Process batch log generation directly from DataFrame
+    # def do_batch_logs(self, log_df: pd.DataFrame) -> pd.DataFrame:
+    #     """
+    #     Process batch log generation directly from DataFrame
 
-        Args:
-            log_df: DataFrame with columns ['errand_number']
+    #     Args:
+    #         log_df: DataFrame with columns ['errand_number']
 
-        Returns:
-            DataFrame with log results
-        """
-        if log_df.empty:
-            return pd.DataFrame()
+    #     Returns:
+    #         DataFrame with log results
+    #     """
+    #     if log_df.empty:
+    #         return pd.DataFrame()
 
-        self.df = log_df.copy()
-        return self.do_chronological_log()
+    #     self.df = log_df.copy()
+    #     return self.do_chronological_log()
 
-    # Removed generate_multiple_logs - API layer handles all Pydantic conversions
-    
     def get_statistics(self) -> pd.DataFrame:
         """
         Get statistics for processed logs DataFrame
@@ -236,5 +232,3 @@ class LogDataset:
             stats_results.append(stats)
 
         return pd.DataFrame(stats_results)
-
-    # Removed get_log_summary_stats - API layer handles all Pydantic conversions

@@ -441,17 +441,23 @@ queryDict = {
                                 ic.reference ,
                                 er."invoiceReference" ,
                                 COALESCE(ecr."correctedCategory", ecr."category") AS "correctedCategory" ,
-                                ecr."data" ->> 'sender' AS "sender" ,
                                 ecr."data" ->> 'insuranceNumber' AS "insuranceNumber" ,
                                 ecr."data" ->> 'damageNumber' AS "damageNumber" ,
                                 ecr."data" ->> 'animalName' AS "animalName" ,
                                 ecr."data" ->> 'ownerName' AS "ownerName" ,
-                                ecr."data" ->> 'recipient' AS "receiver" 
-                            FROM email e 
-                            INNER JOIN email_category_request ecr ON ecr."emailId" = e.id
-                            LEFT JOIN errand er ON er.id = COALESCE(e."errandId", (ecr."data" -> 'errandId'->> 0)::int)
-                            LEFT JOIN insurance_case ic  ON ic."errandId" = e."errandId"
-                            WHERE e.id = {ID};'''],
+                                ecr."data" ->> 'sender' AS "sender" ,
+                                COALESCE(ecr."data" ->> 'receiver', ecr."data" ->> 'recipient') AS "receiver" ,
+                                c."linkJournalTenant" ,
+                                ic."journalNumber" 
+                            FROM email e
+                            JOIN email_category_request ecr ON ecr."emailId" = e.id
+                            JOIN clinic c ON ( (((ecr."data" ->> 'source') = 'Clinic') 
+                                   AND (c."name" = (ecr."data" ->> 'sender')))
+                                 OR (((ecr."data" ->> 'source') = 'Insurance_Company') 
+                                   AND (c."name" = COALESCE(ecr."data" ->> 'receiver', ecr."data" ->> 'recipient'))))
+                            LEFT JOIN errand er ON e."errandId" = er.id
+                            LEFT JOIN insurance_case ic ON ic."errandId" = er.id 
+                            WHERE {CONDITION};'''],
   'payment': [''' SELECT DISTINCT
                       id, 
                       amount , 
