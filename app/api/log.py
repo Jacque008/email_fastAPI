@@ -1,5 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Request, Form
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, HTTPException, Depends, Request, Form, status
 from fastapi.templating import Jinja2Templates
 from typing import List, Dict, Any, Optional, Union
 import logging
@@ -146,7 +145,7 @@ async def get_log_by_errand_number(errand_number: str):
 
 
 @router.post("/log_batch_api", response_model=List[LogOut])
-async def generate_batch_logs_api(log_data: List[Dict[str, Any]]):
+async def generate_batch_logs_api(log_data: List[LogIn]):
     """
     Generate chronological logs for multiple errands efficiently.
 
@@ -156,22 +155,9 @@ async def generate_batch_logs_api(log_data: List[Dict[str, Any]]):
         if not log_data:
             raise HTTPException(status_code=400, detail="Log data cannot be empty")
 
-        log_requests = []
-        for i, data in enumerate(log_data):
-            errand_number = data.get("errandNumber")
-            if not errand_number:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Missing 'errandNumber' in request item {i}"
-                )
-            log_requests.append(LogIn(errand_number=errand_number))
-
-        # Use pure DataFrame approach for batch processing
-        log_df = pd.DataFrame([{
-            'errand_number': lr.errand_number
-        } for lr in log_requests])
-        ds = LogDataset()
-        result_df = ds.do_batch_logs(log_df)
+        log_df = pd.DataFrame([log.model_dump(by_alias=True) for log in log_data])
+        ds = LogDataset(df=log_df)
+        result_df = ds.do_chronological_log()
 
         if result_df.empty:
             return []
@@ -195,7 +181,7 @@ async def generate_batch_logs_api(log_data: List[Dict[str, Any]]):
         )
 
 @router.post("/log_api", response_model=Union[LogOut, List[LogOut]])
-async def generate_log_api(log_data: Union[Dict[str, Any], List[Dict[str, Any]]]):
+async def generate_log_api(log_data: List[LogIn]):
     """
     Generate chronological log(s) for errand(s) - accepts JSON format
 
@@ -213,73 +199,34 @@ async def generate_log_api(log_data: Union[Dict[str, Any], List[Dict[str, Any]]]
     - Payment transactions
     - Cancellations and reversals
     """
+    
     try:
-        # Handle single request
-        if isinstance(log_data, dict):
-            errand_number = log_data.get("errandNumber")
-            if not errand_number:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Missing 'errandNumber' in request data"
-                )
-
-            log_request = LogIn(errand_number=errand_number)
-
-            # Use pure DataFrame approach - API handles Pydantic conversions
-            log_df = pd.DataFrame([{'errand_number': log_request.errand_number}])
-            ds = LogDataset(df=log_df)
-            result_df = ds.do_chronological_log()
-
-            if result_df.empty:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"No log data found for errand {errand_number}"
-                )
-
-            # Convert DataFrame result to Pydantic model here in API layer
-            result_data = result_df.iloc[0].to_dict()
-            clean_data = {k: v for k, v in result_data.items() if pd.notna(v)}
-            return LogOut(**clean_data)
-
-        # Handle batch requests
-        elif isinstance(log_data, list):
-            if not log_data:
-                raise HTTPException(status_code=400, detail="Log data cannot be empty")
-
-            log_requests = []
-            for i, data in enumerate(log_data):
-                errand_number = data.get("errandNumber")
-                if not errand_number:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Missing 'errandNumber' in request item {i}"
-                    )
-                log_requests.append(LogIn(errand_number=errand_number))
-
-            # Use pure DataFrame approach for batch processing
-            log_df = pd.DataFrame([{
-                'errand_number': lr.errand_number
-            } for lr in log_requests])
-            ds = LogDataset()
-            result_df = ds.do_batch_logs(log_df)
-
-            if result_df.empty:
-                return []
-
-            # Convert DataFrame results to Pydantic models here in API layer
-            results = []
-            for _, row in result_df.iterrows():
-                result_data = row.to_dict()
-                clean_data = {k: v for k, v in result_data.items() if pd.notna(v)}
-                results.append(LogOut(**clean_data))
-
-            return results
-
-        else:
+        if not log_data:
             raise HTTPException(
-                status_code=400,
-                detail="Invalid request format. Expected JSON object or array with log data"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Forwarding data cannot be empty. Expected exactly one record."
             )
+
+        if len(log_data) != 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"API accepts only one record at a time. Received {len(log_data)} records."
+            )
+
+        log_df = pd.DataFrame([log.model_dump(by_alias=True) for log in log_data])
+        ds = LogDataset(df=log_df)
+        result_df = ds.do_chronological_log()
+
+        if result_df.empty:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No log data found for errand {log_data[0].errand_number}"
+            )
+
+        # Convert DataFrame result to Pydantic model here in API layer
+        result_data = result_df.iloc[0].to_dict()
+        clean_data = {k: v for k, v in result_data.items() if pd.notna(v)}
+        return LogOut(**clean_data)
 
     except HTTPException:
         raise
@@ -292,7 +239,7 @@ async def generate_log_api(log_data: Union[Dict[str, Any], List[Dict[str, Any]]]
 
 @router.post("/log_stats")
 async def log_statistics(
-    log_data: Union[Dict[str, Any], List[Dict[str, Any]]]
+    log_data: List[LogIn]
 ):
     """
     Get statistics about generated logs - accepts JSON format
@@ -304,70 +251,21 @@ async def log_statistics(
         Statistics about log generation (single dict or list of dicts)
     """
     try:
-        # Handle single request
-        if isinstance(log_data, dict):
-            errand_number = log_data.get("errandNumber")
-            if not errand_number:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Missing 'errandNumber' in request data"
-                )
+        if not log_data:
+            raise HTTPException(status_code=400, detail="Log data cannot be empty")
 
-            log_request = LogIn(errand_number=errand_number)
+        log_df = pd.DataFrame([log.model_dump(by_alias=True) for log in log_data])
+        ds = LogDataset(df=log_df)
+        stats_df = ds.get_statistics()
 
-            # Use pure DataFrame approach - API handles all conversions
-            log_df = pd.DataFrame([{'errand_number': log_request.errand_number}])
-            ds = LogDataset(df=log_df)
-            stats_df = ds.get_statistics()
+        if stats_df.empty:
+            return {'has_error': True, 'error_message': 'No statistics available'}
 
-            if stats_df.empty:
-                return {'has_error': True, 'error_message': 'No statistics available'}
-
-            stats_dict = stats_df.iloc[0].to_dict()
-            # Remove NaN values
-            stats = {k: v for k, v in stats_dict.items() if pd.notna(v)}
-            return stats
-
-        # Handle batch requests
-        elif isinstance(log_data, list):
-            if not log_data:
-                raise HTTPException(status_code=400, detail="Log data cannot be empty")
-
-            log_requests = []
-            for i, data in enumerate(log_data):
-                errand_number = data.get("errandNumber")
-                if not errand_number:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Missing 'errandNumber' in request item {i}"
-                    )
-                log_requests.append(LogIn(errand_number=errand_number))
-
-            # Use pure DataFrame approach for batch statistics
-            log_df = pd.DataFrame([{
-                'errand_number': lr.errand_number
-            } for lr in log_requests])
-            ds = LogDataset(df=log_df)
-            stats_df = ds.get_statistics()
-
-            if stats_df.empty:
-                return [{'has_error': True, 'error_message': 'No statistics available'}] * len(log_requests)
-
-            results = []
-            for _, row in stats_df.iterrows():
-                stats_dict = row.to_dict()
-                # Remove NaN values
-                stats = {k: v for k, v in stats_dict.items() if pd.notna(v)}
-                results.append(stats)
-
-            return results
-
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid request format. Expected JSON object or array with log data"
-            )
-
+        stats_dict = stats_df.iloc[0].to_dict()
+        # Remove NaN values
+        stats = {k: v for k, v in stats_dict.items() if pd.notna(v)}
+        return stats
+    
     except HTTPException:
         raise
     except Exception as e:
