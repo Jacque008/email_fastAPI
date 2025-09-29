@@ -1,13 +1,18 @@
-from typing import Optional
-from pydantic import BaseModel, Field
+from typing import Dict
+from pydantic import BaseModel, Field, RootModel
 
 class LogIn(BaseModel):
     """Input schema for chronological log requests"""
     errandNumber: str = Field(description="Errand number to generate log for")
 
-class LogOut(BaseModel):
-    """Output schema for chronological log results"""
-    Title: str = Field(description="Log title with payment discrepancy info")
-    Chronological_Log: str = Field(description="Formatted chronological log content")
-    AI_Analysis: str = Field(description="AI risk assessment and analysis")
-    error_message: Optional[str] = Field(default=None, description="Error message if processing failed")
+class LogOut(RootModel[Dict[str, Dict[str, str]]]):
+    """Output schema for chronological log results - nested structure like:
+    {
+        "Ärenden: 69025": {
+            "AI_Analysis": "...",
+            "Chronological_Log": "<br>..."
+        }
+    }
+    """
+    root: Dict[str, Dict[str, str]]
+

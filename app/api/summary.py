@@ -1,4 +1,4 @@
-from typing import Optional, Union, List, Dict, Any
+from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Request, HTTPException, status, Depends, Form
 from fastapi.templating import Jinja2Templates
 import os
@@ -6,10 +6,8 @@ import pandas as pd
 
 from ..schemas.summary import SummaryIn, SummaryOutWeb, SummaryOutAPI
 from ..dataset.summary_dataset import SummaryDataset
-from ..services.services import DefaultServices
 from ..core.auth import get_current_user
 
-# Get templates directory
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
@@ -97,8 +95,8 @@ async def process_summary_request(
             "error": f"Summary generation failed: {str(e)}"
         })
 
-@router.post("/summary_api", response_model=List[SummaryOutAPI])
-async def summary_api(summary_data: List[Dict[str, Any]]) -> List[SummaryOutAPI]:
+@router.post("/summary_api", response_model=SummaryOutAPI)
+async def summary_api(summary_data: List[SummaryIn]) -> SummaryOutAPI:
     """
     API endpoint for generating summaries - accepts JSON array format
 
@@ -124,21 +122,7 @@ async def summary_api(summary_data: List[Dict[str, Any]]) -> List[SummaryOutAPI]
                 detail="Summary data cannot be empty"
             )
 
-        summary_requests = []
-        for i, data in enumerate(summary_data):
-            try:
-                summary_requests.append(SummaryIn(**data))
-            except Exception as e:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid summary data in item {i}: {str(e)}"
-                )
-
-        summary_df = pd.DataFrame([{
-            'emailId': sr.emailId,
-            'errandNumber': sr.errandNumber,
-            'reference': sr.reference
-        } for sr in summary_requests])
+        summary_df = pd.DataFrame([summary.model_dump(by_alias=True) for summary in summary_data])
         ds = SummaryDataset(df=summary_df)
         result_df = ds.do_summary(use_case='api')
 
@@ -148,9 +132,9 @@ async def summary_api(summary_data: List[Dict[str, Any]]) -> List[SummaryOutAPI]
                 detail="No summaries generated"
             )
 
-        results = []
-        for _, row in result_df.iterrows():
-            result_data = row.to_dict()
+        # Process the first (and expected only) row
+        if len(result_df) > 0:
+            result_data = result_df.iloc[0].to_dict()
             clean_data = {k: v for k, v in result_data.items() if pd.notna(v)}
 
             if clean_data.get('error_message'):
@@ -159,13 +143,29 @@ async def summary_api(summary_data: List[Dict[str, Any]]) -> List[SummaryOutAPI]
                     detail=clean_data['error_message']
                 )
 
-            api_data = {
-                'Summary_Combined_Info': clean_data.get('summary_combined', ''),
-                'Error_Combined_Info': clean_data.get('error_combined', '')
-            }
-            results.append(SummaryOutAPI(**api_data))
+            # Apply the logic: if no error, Error_Combined_Info = null; if error, Summary_Combined_Info = null
+            summary_content = clean_data.get('summary_combined', None)
+            error_content = clean_data.get('error_combined', None)
 
-        return results
+            if error_content:
+                # Has error: show error, hide summary
+                api_data = {
+                    'Summary_Combined_Info': None,
+                    'Error_Combined_Info': error_content
+                }
+            else:
+                # No error: show summary, hide error
+                api_data = {
+                    'Summary_Combined_Info': summary_content,
+                    'Error_Combined_Info': None
+                }
+
+            return SummaryOutAPI(**api_data)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="No summary data processed"
+            )
 
     except ValueError as e:
         raise HTTPException(

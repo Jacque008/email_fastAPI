@@ -389,11 +389,11 @@ queryDict = {
                             er."strategyType" ,
                             es.settled AS "settled" 
                         FROM insurance_case ic 
-                        INNER JOIN errand er ON ic."errandId" = er.id
-                        INNER JOIN animal a  ON ic."animalId" = a.id
-                        INNER JOIN animal_owner ao ON er."animalOwnerId" = ao.id
-                        INNER JOIN errand_status es ON er."statusId" = es.id
-                        INNER JOIN ( SELECT 
+                        JOIN errand er ON ic."errandId" = er.id
+                        JOIN animal a  ON ic."animalId" = a.id
+                        JOIN animal_owner ao ON er."animalOwnerId" = ao.id
+                        JOIN errand_status es ON er."statusId" = es.id
+                        JOIN ( SELECT 
                                         "insuranceCaseId", 
                                         SUM(amount) AS "totalAmount" 
                                     FROM insurance_case_billing_row
@@ -409,8 +409,8 @@ queryDict = {
                                           WHERE inst."insuranceCaseId" = ist."insuranceCaseId")
                                     ) AS ls ON ls."insuranceCaseId" = ic.id
                         INNER join insurance_company_email ice ON ic."insuranceCompanyEmailId" = ice.id
-                        INNER JOIN insurance_company fb ON ice."insuranceCompanyId" = fb.id 
-                        INNER JOIN clinic c ON er."clinicId" = c.id
+                        JOIN insurance_company fb ON ice."insuranceCompanyId" = fb.id 
+                        JOIN clinic c ON er."clinicId" = c.id
                         WHERE {CONDITION}
                         ORDER BY date DESC;'''],
   'emailSpec': [''' SELECT DISTINCT 
@@ -535,7 +535,7 @@ queryDict = {
                           er.reference AS "errandNumber",
                           ic.reference
                       FROM insurance_case ic 
-                      INNER JOIN errand er ON ic."errandId" = er.id
+                      JOIN errand er ON ic."errandId" = er.id
                       WHERE {CONDITION};'''],
   'payout': ['''  SELECT DISTINCT
                     bpfl.id ,
@@ -546,9 +546,9 @@ queryDict = {
                     c."name"  AS "clinicName" ,
                     t.type_ AS "type"
                   FROM bankgiro_payout_file_line bpfl 
-                  INNER JOIN "transaction" t ON t.id = bpfl."transactionId" 
-                  INNER JOIN errand er ON er.id = t."errandId" 
-                  INNER JOIN clinic c  ON c.id = er."clinicId"
+                  JOIN "transaction" t ON t.id = bpfl."transactionId" 
+                  JOIN errand er ON er.id = t."errandId" 
+                  JOIN clinic c  ON c.id = er."clinicId"
                   WHERE bpfl."createdAt" >= NOW() - INTERVAL '2 month'
                   AND bpfl.type_ = 'paid'
                   ORDER BY bpfl."createdAt" DESC;'''],
@@ -565,9 +565,9 @@ queryDict = {
                   c."insuranceCompanyId" ,
                   fb.name AS "insuranceCompanyName" 
               FROM chat_message cm
-              INNER JOIN chat c ON c.id = cm."chatId"
-              INNER JOIN errand er ON er.id = c."errandId" 
-              INNER JOIN insurance_case ic ON ic."errandId" = c."errandId"
+              JOIN chat c ON c.id = cm."chatId"
+              JOIN errand er ON er.id = c."errandId" 
+              JOIN insurance_case ic ON ic."errandId" = c."errandId"
               LEFT JOIN clinic cl ON cl.id = c."clinicId"
               LEFT JOIN insurance_company fb ON fb.id = c."insuranceCompanyId"
               WHERE {CONDITION}
@@ -586,8 +586,8 @@ queryDict = {
                           ecr."data" ->> 'recipient' AS "receiver"
                       FROM email e
                       LEFT JOIN email_category_request ecr ON e.id = ecr."emailId"
-                      INNER JOIN errand er ON e."errandId" = er.id
-                      INNER JOIN insurance_case ic ON ic."errandId" = er.id
+                      JOIN errand er ON e."errandId" = er.id
+                      JOIN insurance_case ic ON ic."errandId" = er.id
                       WHERE {CONDITION}
                       ORDER BY e."createdAt" ASC;'''],
   'summaryComment': [''' SELECT 
@@ -601,7 +601,7 @@ queryDict = {
                                   WHEN cr."errandId" IS NOT NULL THEN 'Errand'
                               END AS "type"
                           FROM comment c
-                          INNER JOIN comment_relation cr ON c.id = cr."commentId"
+                          JOIN comment_relation cr ON c.id = cr."commentId"
                           LEFT JOIN email e ON cr."emailId" = e.id
                           LEFT JOIN errand er ON cr."errandId" = er.id
                           LEFT JOIN insurance_case ic ON ic."errandId" = cr."errandId"
@@ -637,7 +637,7 @@ queryDict = {
                     ic."insuranceEmailLastSent" AS "sendTime" ,
                     es.complete 
                   FROM errand er
-                  INNER JOIN insurance_case ic ON ic."errandId" = er.id
+                  JOIN insurance_case ic ON ic."errandId" = er.id
                   LEFT JOIN ( SELECT DISTINCT ist."insuranceCaseId", ROUND(ist."settlementAmount" / 100, 2) AS "settlementAmount" , ist."updatedAt"
                               FROM insurance_settlement ist
                               WHERE ist."updatedAt" = (
@@ -662,8 +662,8 @@ queryDict = {
                       ecr."correctedCategory" ,
                       ecr."data" ->> 'source' AS "source" 
                   FROM errand er             
-                  INNER JOIN email e ON e."errandId" = er.id
-                  INNER JOIN email_category_request ecr ON ecr."emailId" = e.id
+                  JOIN email e ON e."errandId" = er.id
+                  JOIN email_category_request ecr ON ecr."emailId" = e.id
                   WHERE e.folder = 'inbox'
                     AND {COND}
                   ORDER BY er."createdAt" DESC'''],
@@ -679,8 +679,8 @@ queryDict = {
                         --cm."fromInsuranceCompanyId" AS "chatFB" ,
                       	fb."name" AS "chatFB"
                     FROM errand er  
-                    INNER JOIN chat c ON c."errandId" = er.id
-                    INNER JOIN chat_message cm ON cm."chatId" = c.id
+                    JOIN chat c ON c."errandId" = er.id
+                    JOIN chat_message cm ON cm."chatId" = c.id
                     LEFT JOIN clinic_user cu  ON cu.id = cm."fromClinicUserId" 
                     LEFT JOIN clinic ON clinic.id = cu."clinicId" 
                     LEFT JOIN insurance_company fb ON fb.id = cm."fromInsuranceCompanyId" 
@@ -695,34 +695,37 @@ queryDict = {
                         c2."createdByAdminId" ,
                         au2."firstName" AS "commentDRP" 
                     FROM errand er 
-                    INNER JOIN comment_relation cr ON cr."errandId" = er.id
-                    INNER JOIN "comment" c2 ON c2.id = cr."commentId" 
+                    JOIN comment_relation cr ON cr."errandId" = er.id
+                    JOIN "comment" c2 ON c2.id = cr."commentId" 
                     LEFT JOIN admin_user au2 ON c2."createdByAdminId" = au2.id
                     WHERE {COND}
                     ORDER BY er."createdAt" DESC'''],
+  'logPaymentOption': ['''SELECT t."paymentOption"  
+                          FROM "transaction" t  
+                          JOIN errand er ON er.id = t."errandId" 
+                          WHERE t."paymentOption" NOTNULL
+                            AND {COND};'''],
   'logOriginalInvoice': ['''SELECT  
                                 t."errandId" ,
-                                t.id AS "transactionId" ,
                                 t."createdAt" AS "transTime" ,
-                                ROUND(tl.amount / 100, 2) AS "invoiceAmount" 
+                                (tl.amount / 100) AS "invoiceAmount" 
                             FROM "transaction" t 
                             JOIN errand er on er.id = t."errandId"
                             JOIN transaction_line tl ON tl."transactionId" = t.id
                             JOIN account a on tl."accountId" = a.id
                             WHERE t.type_ = 'original_invoice'
                                 AND a."ownerType" = 'animal_owner'
-                                AND er.id = 73060
+                                AND {COND}
                             ORDER BY er."createdAt" DESC;'''],
   'logInvoiceSP': ['''SELECT  
                           t."errandId" ,
-                          t.id AS "transactionId" ,
                           t."createdAt" AS "transTime" ,
                           t."paymentOption" ,
                           spo."invoiceNumber"  ,
 	                        spo."invoiceAmount"
                       FROM "transaction" t
-                      INNER JOIN errand er on er.id = t."errandId"
-                      INNER JOIN (SELECT sp.id, 
+                      JOIN errand er on er.id = t."errandId"
+                      LEFT JOIN (SELECT sp.id, 
                                          sp."payeeReference" AS "invoiceNumber",
                                          ROUND(CAST(sp."extSwedbankPayOrder" -> 'paymentOrder' ->> 'amount' AS NUMERIC) / 100, 2) AS "invoiceAmount" 
                                   FROM swedbank_pay_order sp) AS spo ON spo.id = t."swedbankPayOrderId"
@@ -730,16 +733,15 @@ queryDict = {
                         AND t."paymentOption" = 'swedbankPay'
                         AND {COND}
                       ORDER BY er."createdAt" DESC'''],
-  'logInvoiceFO': ['''SELECT  
+  'logInvoiceFortus': ['''SELECT  
                           t."errandId" ,
-                          t.id AS "transactionId" ,
                           t."createdAt" AS "transTime" ,
                           t."paymentOption" ,
                           f."invoiceNumber",
 	                        f."invoiceAmount"
                       FROM "transaction" t
-                      INNER JOIN errand er on er.id = t."errandId"
-                      INNER JOIN (SELECT fo.id, 
+                      JOIN errand er on er.id = t."errandId"
+                      LEFT JOIN (SELECT fo.id, 
                                          fo."fortusInvoiceNumber" AS "invoiceNumber",
                                          fo."orderData" ->> 'order_amount' AS "invoiceAmount"  
                                   FROM fortus_order fo) AS f ON f.id = t."fortusOrderId"
@@ -749,56 +751,171 @@ queryDict = {
                       ORDER BY er."createdAt" DESC'''],
   'logInvoiceKA': ['''SELECT  
                           t."errandId" ,
-                          t.id AS "transactionId" ,
                           t."createdAt" AS "transTime" ,
                           t."paymentOption" ,
                           ka."invoiceNumber" ,
                           ka."invoiceAmount" 
                       FROM "transaction" t 
-                      INNER JOIN errand er ON t."errandId" = er.id 
-                      INNER JOIN (  SELECT DISTINCT 
-                                        t.id AS "id",
-                                        t.reference AS "invoiceNumber" , 
-                                        ROUND(tl.amount / 100, 2) AS "invoiceAmount" 
-                                    FROM "transaction" t
-                                    INNER JOIN transaction_line tl ON tl."transactionId" = t.id
-                                    INNER JOIN account a on tl."accountId" = a.id
-                                    WHERE a."ownerType" = 'animal_owner') AS ka ON ka."id" = t."customerPaymentId"
+                      JOIN errand er ON t."errandId" = er.id 
+                      LEFT JOIN (SELECT DISTINCT 
+                                t.id AS "id",
+                                t.reference AS "invoiceNumber" , 
+                                ROUND(tl.amount / 100, 2) AS "invoiceAmount" 
+                            FROM "transaction" t
+                            JOIN transaction_line tl ON tl."transactionId" = t.id
+                            JOIN account a on tl."accountId" = a.id
+                            WHERE a."ownerType" = 'animal_owner') AS ka ON ka."id" = t."customerPaymentId"
                       WHERE t.type_ = 'customer_invoice'
-                        AND t."paymentOption" not in ('fortus','swedbankPay')
+                        AND t."paymentOption" = 'manual
                         AND {COND}
                       ORDER BY er."createdAt" DESC'''],
+  'logInvoiceFortnox': [''' SELECT DISTINCT 
+                                er.id AS "errandId", 
+                                er."createdAt" AS "transTime" ,
+                                'Fortnox' AS "paymentOption", 
+                                di."datacentralenInvoiceId" AS "invoiceNumber" ,
+                                (di.amount / 100.0 ) AS "invoiceAmount"
+                            FROM  "transaction" t 
+                            JOIN datacentralen_invoice di ON t."datacentralenInvoiceId" = di.id
+                            JOIN errand er ON er.id = t."errandId"
+                            WHERE t.type_ = 'customer_invoice'
+                              AND t."paymentOption" in ('datacentralen', 'datacentralen12')
+                              AND {COND}
+                              ORDER BY er."createdAt" DESC;'''],
+  'logInvoicePayex': [''' SELECT DISTINCT 
+                              er.id AS "errandId", 
+                              ao.id AS "animalOwnerId" ,
+                              t.reference AS "invoiceNumber" ,
+                              pif."fileName" ,
+                              er."createdAt" AS "transTime",
+                              er."paymentOption"
+                          FROM "transaction" t 
+                          JOIN errand er ON er.id = t."errandId"
+                          JOIN animal_owner ao ON er."animalOwnerId" = ao.id
+                          JOIN payex_invoice pyi ON t.id = pyi."customerInvoiceId" 
+                          JOIN payex_invoice_file pif ON pyi."payexInvoiceFileId" = pif.id
+                          WHERE er."paymentOption" = 'payex'
+                            AND t.type_ = 'customer_invoice'
+                            AND {COND}
+                          ORDER BY er."createdAt" DESC;'''],
+  'logVetFee': [''' SELECT  
+                        t."errandId" ,
+                        t."createdAt" AS "transTime" ,
+                        t.reference ,
+	                      a."name",
+                        ROUND(tl.amount / 100, 2) AS "vetFeeAmount" 
+                    FROM "transaction" t 
+                    JOIN errand er on er.id = t."errandId"
+                    JOIN transaction_line tl ON tl."transactionId" = t.id
+                    JOIN account a on tl."accountId" = a.id
+                    WHERE t.type_ = 'fee_vet'
+                      AND a."ownerType" = 'clinic'
+                      AND a.type_ = 'payable'
+                      AND {COND}
+                    ORDER BY er."createdAt" DESC;'''], 
   'logReceive': ['''SELECT 
                         t."errandId" ,
                         t.id AS "transactionId" ,
                         tl."createdAt" ,
-                        ROUND(tl.amount / 100, 2) AS "amount",
+                        (tl.amount / -100.0) AS "amount",
                         a."name" ,
                         tl."accountingDate"
-                    FROM  transaction_line tl
-                    INNER JOIN account a ON tl."accountId" = a.id
-                    INNER JOIN "transaction" t ON tl."transactionId" = t.id
-                    INNER JOIN errand er on er.id = t."errandId"
-                    INNER JOIN errand_status es ON es.id = er."statusId" 
+                    FROM transaction_line tl
+                    JOIN account a ON tl."accountId" = a.id
+                    JOIN "transaction" t ON tl."transactionId" = t.id
+                    JOIN errand er on er.id = t."errandId"
+                    JOIN errand_status es ON es.id = er."statusId" 
                     WHERE {COND}
                     ORDER BY er."createdAt" DESC'''], 
-  'logCancel': [''' SELECT
-                        t."errandId" ,
-                        t.id AS "transactionId" ,
-                        t."createdAt" AS "cancelTime"
-                    FROM "transaction"  t               
-                    INNER JOIN errand er ON er.id = t."errandId" 
-                    INNER JOIN errand_status es ON es.id = er."statusId" 
-                    WHERE t.type_ = 'cancel'
-                      AND es.cancelled IS TRUE
-                      AND {COND}
-                    ORDER BY er."createdAt" DESC '''],
+  'logPayexReceived': ['''  WITH tx AS (
+                              SELECT d.id,
+                                    (d."rawData"::jsonb->'$'->>'PXId')            AS pxid,
+                                    (d."rawData"::jsonb->'$'->>'AccountName')     AS account_name,
+                                    (t->'$'->>'BookAccount')                      AS book_account,
+                                    (t->'$'->>'AccountingAction')                 AS accounting_action,
+                                    (t->'$'->>'Amount')::numeric                  AS amount
+                              FROM payex_accounting_detail d
+                              CROSS JOIN LATERAL jsonb_path_query(
+                                d."rawData"::jsonb,
+                                '$.VoucherDetailTransactions[*].VoucherDetailTransaction[*]'::jsonpath
+                              ) t)
+                            SELECT DISTINCT 
+                              er.id AS "errandId", 
+                              d.account_name,
+                              c."name", 
+                              er."createdAt" ,
+                              er."paymentOption", 
+                              COALESCE(
+                                (
+                                  SELECT -p.amount
+                                  FROM tx p
+                                  WHERE p.id = d.id
+                                    AND p.accounting_action = 'C' AND p.book_account = '1510'
+                                    AND EXISTS (
+                                      SELECT 1 FROM tx c
+                                      WHERE c.id = d.id
+                                        AND c.accounting_action = 'D' AND c.book_account = '1684'
+                                        AND c.amount = -p.amount
+                                    )
+                                  LIMIT 1
+                                ),
+                                (
+                                  SELECT  p.amount
+                                  FROM tx p
+                                  WHERE p.id = d.id
+                                    AND p.accounting_action = 'C' AND p.book_account = '1510'
+                                    AND EXISTS (
+                                      SELECT 1 FROM tx disc
+                                      WHERE disc.id = d.id
+                                        AND disc.accounting_action = 'D' AND disc.book_account = '3710'
+                                        AND disc.amount = -p.amount
+                                    )
+                                  LIMIT 1
+                                ),
+                                (
+                                  SELECT -pd.amount
+                                  FROM tx pd
+                                  WHERE pd.id = d.id
+                                    AND pd.accounting_action = 'C' AND pd.book_account = '1519'
+                                    AND EXISTS (
+                                      SELECT 1 FROM tx c
+                                      WHERE c.id = d.id
+                                        AND c.accounting_action = 'D' AND c.book_account = '1684'
+                                        AND c.amount = -pd.amount
+                                    )
+                                  LIMIT 1
+                                ),
+                                0
+                              ) AS customer_paid_amount
+                            FROM (SELECT DISTINCT id, pxid, account_name FROM tx) d
+                            LEFT JOIN "transaction" t        ON t.reference = d.account_name
+                            LEFT JOIN transaction_line tl    ON tl."transactionId" = t.id
+                            LEFT JOIN account a              ON a.id = tl."accountId"
+                            LEFT JOIN errand er              ON er.id = t."errandId"
+                            LEFT JOIN clinic c               ON c.id = er."clinicId"
+                            WHERE er."paymentOption" = 'payex'
+                              AND t.type_ = 'customer_payment'
+                              AND a."ownerType" = 'animal_owner'
+                              AND a.type_ = 'receivable'
+                              AND {COND}
+                            ORDER BY er."createdAt" DESC ;'''],
+                              'logCancel': [''' SELECT
+                                                    t."errandId" ,
+                                                    t.id AS "transactionId" ,
+                                                    t."createdAt" AS "cancelTime"
+                                                FROM "transaction"  t               
+                                                JOIN errand er ON er.id = t."errandId" 
+                                                JOIN errand_status es ON es.id = er."statusId" 
+                                                WHERE t.type_ = 'cancel'
+                                                  AND es.cancelled IS TRUE
+                                                  AND {COND}
+                                                ORDER BY er."createdAt" DESC '''],
   'logRemoveCancel': [''' SELECT
                               t."errandId" ,
                               t.id AS "transactionId" ,
                               t."createdAt" AS "removeTime"
                           FROM "transaction"  t
-                          INNER JOIN errand er ON er.id = t."errandId" 
+                          JOIN errand er ON er.id = t."errandId" 
                           WHERE t.type_ = 'remove_cancel'
                             AND {COND}
                           ORDER BY er."createdAt" DESC '''],

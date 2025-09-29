@@ -6,7 +6,6 @@ import pandas as pd
 from ..schemas.forward import ForwardingIn, ForwardingOut
 from ..dataset.forward_dataset import ForwardDataset
 from ..services.services import DefaultServices
-from ..services.utils import dataframe_to_model
 from ..core.auth import get_current_user
 
 # Get templates directory
@@ -57,12 +56,17 @@ async def process_forward_email(
             clean_data.setdefault('action', 'forwarding')
             clean_data.setdefault('forward_address', '')
             clean_data.setdefault('forward_subject', '')
-            clean_data.setdefault('forward_text', '')
+            clean_data.setdefault('forward_text', None)
+            clean_data.setdefault('journal_data', None)
             forward = ForwardingOut(**clean_data)
-        
+
+        # Convert to dict and filter out None values for template
+        result_dict = forward.to_dict()
+        filtered_result = {k: v for k, v in result_dict.items() if v is not None}
+
         return templates.TemplateResponse("forward.html", {
             "request": request,
-            "result": forward.to_dict(),  
+            "result": filtered_result,
             "id": id,
             "userId": userId
         })
@@ -75,10 +79,10 @@ async def process_forward_email(
             "userId": userId
         })     
 
-@router.post("/forward_api", response_model=ForwardingOut)
+@router.post("/forward_api", response_model=List[Dict[str, Any]])
 async def forwarding_api(
     forwarding_data: List[ForwardingIn]
-) -> ForwardingOut:
+) -> List[Dict[str, Any]]:
     """API endpoint for email forwarding - accepts JSON array with single record
 
     Expected format:
@@ -103,22 +107,26 @@ async def forwarding_api(
         result_df = ds.do_forward()
 
         if result_df.empty:
-            return ForwardingOut(id=forwarding_data[0].id)
+            forward = ForwardingOut(id=forwarding_data[0].id)
+            result_dict = forward.to_dict()
+            # Remove None fields from the result
+            filtered_result = {k: v for k, v in result_dict.items() if v is not None}
+            return [filtered_result]
         else:
             result_data = result_df.iloc[0].to_dict()
             clean_data = {k: v for k, v in result_data.items() if pd.notna(v) and v != ''}
-
-            # Handle forward_text as dict (for Link emails) or string (for regular emails)
-            if 'forward_text' in clean_data and isinstance(clean_data['forward_text'], dict):
-                # Convert dict to string for Link emails
-                clean_data['forward_text'] = str(clean_data['forward_text'])
 
             # Ensure required fields exist
             clean_data.setdefault('action', 'Vidarebefordra')
             clean_data.setdefault('forward_address', '')
             clean_data.setdefault('forward_subject', '')
-            clean_data.setdefault('forward_text', '')
-            return ForwardingOut(**clean_data)
+            clean_data.setdefault('forward_text', None)
+            clean_data.setdefault('journal_data', None)
+            forward = ForwardingOut(**clean_data)
+            result_dict = forward.to_dict()
+            # Remove None fields from the result
+            # filtered_result = {k: v for k, v in result_dict.items() if v is not None}
+            return [result_dict]
 
     except Exception as e:
         raise HTTPException(

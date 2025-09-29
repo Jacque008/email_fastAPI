@@ -12,14 +12,19 @@ from groq import Groq
 from google.cloud.sql.connector import Connector, IPTypes
 from sqlalchemy.sql import text as sqlalchemy_text
 
+def get_service_account_path():
+    """Get the service account file path based on environment"""
+    if os.getenv('ENV_MODE') == 'local':
+        return "data/other/drp-system-73cd3f0ca038.json"
+    elif os.getenv('ENV_MODE') in ['test', 'production']:
+        return "/SERVICE_ACCOUNT_JIE/SERVICE_ACCOUNT_JIE"
+    else:
+        return "data/other/drp-system-73cd3f0ca038.json"
+
 @lru_cache(maxsize=3)
 def load_sheet_data(url, worksheet, useCols=None):
     try:
-        if os.getenv('ENV_MODE') == 'local':
-            service_account_file = "data/other/drp-system-73cd3f0ca038.json"
-        elif os.getenv('ENV_MODE') in ['test', 'production']:
-            service_account_file = "/SERVICE_ACCOUNT_JIE/SERVICE_ACCOUNT_JIE"
-
+        service_account_file = get_service_account_path()
         gc = gspread.service_account(filename=service_account_file)
         spreadsheet = gc.open_by_url(url)
         worksheet = spreadsheet.worksheet(worksheet)
@@ -37,7 +42,7 @@ def load_sheet_data(url, worksheet, useCols=None):
 #     url = "https://docs.google.com/spreadsheets/d/15TqXNr9UHx4BM8Ae9DbWiFmb_kERbBO1n8u_Oph7LHg/edit?gid=330037605#gid=330037605"
 #     worksheet = "clinic"
 #     return load_sheet_data(url, worksheet)
- 
+  
 def get_payoutEntity():
     url = "https://docs.google.com/spreadsheets/d/15TqXNr9UHx4BM8Ae9DbWiFmb_kERbBO1n8u_Oph7LHg/edit?gid=1488074124#gid=1488074124"
     worksheet = "payoutEntity"
@@ -107,11 +112,7 @@ def fetchFromDB(query):
     return data
 
 def readGoogleSheet(url, worksheet, useCols=None):
-    if os.getenv('ENV_MODE') == 'local':
-        service_account_file = "other/pw/drp-system-73cd3f0ca038.json"
-    elif os.getenv('ENV_MODE') in ['test', 'production']:
-        service_account_file = "/SERVICE_ACCOUNT_JIE/SERVICE_ACCOUNT_JIE" 
-        
+    service_account_file = get_service_account_path()
     gc = gspread.service_account(filename=service_account_file)
     spreadsheet = gc.open_by_url(url)
     worksheet = spreadsheet.worksheet(worksheet)
@@ -355,8 +356,7 @@ def get_groq_client() -> Groq:
         raise ValueError("GROQ_API_KEY environment variable is not set")
     groq_client = Groq(api_key=api_key)
     return groq_client
-
-    
+  
 def groq_chat_with_fallback(groq_client: Groq, messages: list, current_model: str) -> tuple[str, str]:
     """
     Make Groq API call with automatic model switching on rate limits.
@@ -389,3 +389,122 @@ def groq_chat_with_fallback(groq_client: Groq, messages: list, current_model: st
                 raise e
     
     raise Exception("All models hit rate limits")
+
+def parse_payex_xml(file_path, customer_id=None):
+    """Parse Payex XML invoice file and extract customerNo and invoiceAmount with proper types
+
+    Args:
+        file_path (str): Path to the XML file
+        customer_id (str, optional): Specific customer ID to filter. If None, returns all customers.
+
+    Returns:
+        pd.DataFrame: Invoice data with columns: customerNo (int), invoiceAmount (float)
+    """
+    import xml.etree.ElementTree as ET
+    import pandas as pd
+    import tempfile
+    import os
+    import signal
+
+    def timeout_handler(signum, frame):
+        raise Exception("Payex XML parsing timed out after 10 seconds")
+
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(10) 
+
+    try:
+        service_account_path = get_service_account_path()
+
+        try:
+            if os.getenv('ENV_MODE') == 'local' and os.path.exists(service_account_path):
+                os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = service_account_path
+
+            from google.cloud import storage
+            bucket_name = 'drp-system-production'
+            blob_name = file_path
+            client = storage.Client(project=bucket_name)
+            bucket = client.bucket(bucket_name)
+            blob = bucket.blob(blob_name)
+            content = blob.download_as_text(encoding='utf-8')
+
+            if isinstance(content, (bytes, memoryview)):
+                content = bytes(content).decode('utf-8')
+            elif not isinstance(content, str):
+                content = str(content)
+
+            xml_start = content.find('<CUSIN')
+            if xml_start == -1:
+                xml_start = content.find('<?xml')
+                if xml_start == -1:
+                    xml_start = content.find('<')
+
+            if xml_start > 0:
+                content = content[xml_start:]
+
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False) as temp_file:
+                temp_file.write(content)
+                temp_path = temp_file.name
+
+            try:
+                tree = ET.parse(temp_path)
+                root = tree.getroot()
+
+                invoice_data = []
+
+                for cusin_info in root.findall('CUSINInfo'):
+                    customer_no = cusin_info.find('CustomerNo')
+                    customer_no_int = None
+                    if customer_no is not None and customer_no.text is not None:
+                        try:
+                            customer_no_int = int(customer_no.text)
+                        except ValueError:
+                            customer_no_int = None
+
+                    if customer_id is not None:
+                        try:
+                            if customer_no_int != int(customer_id):
+                                continue
+                        except (ValueError, TypeError):
+                            continue
+
+                    for invoice in cusin_info.findall('.//InvoiceWithDistribution'):
+                        invoice_no = invoice.find('InvoiceNo')
+                        invoice_amount_float = None
+
+                        for row in invoice.findall('.//Row'):
+                            columns = row.findall('Columns/Column')
+                            for i, col in enumerate(columns):
+                                text_elem = col.find('Text')
+                                if text_elem is not None and text_elem.text == 'Att betala (SEK)':
+                                    if i + 1 < len(columns):
+                                        amount_col = columns[i + 1]
+                                        amount_text = amount_col.find('Text')
+                                        if amount_text is not None:
+                                            amount_str = amount_text.text
+                                            if amount_str is not None:
+                                                try:
+                                                    invoice_amount_float = float(amount_str.replace(',', '.'))
+                                                except ValueError:
+                                                    invoice_amount_float = None
+                                            break
+                            if invoice_amount_float is not None:
+                                break
+
+                        if customer_no_int is not None and invoice_amount_float is not None:
+                            invoice_data.append({
+                                'animalOwnerId': customer_no_int,
+                                'invoiceNumber': invoice_no.text if invoice_no is not None else None,
+                                'invoiceAmount': invoice_amount_float
+                            })
+
+                return pd.DataFrame(invoice_data)
+
+            finally:
+                os.unlink(temp_path)
+
+        except Exception as e:
+            print(f"GCS error details: {type(e).__name__}: {str(e)}")
+            raise Exception(f"Failed to read XML file: {file_path} - {str(e)}")
+
+    finally:
+        signal.alarm(0)

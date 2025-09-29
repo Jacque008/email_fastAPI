@@ -6,7 +6,6 @@ import json
 import os
 from ..schemas.email import EmailIn, EmailOut
 from ..dataset.email_dataset import EmailDataset
-from ..services.services import DefaultServices
 from ..core.auth import get_current_user
 
 # Get templates directory
@@ -77,18 +76,14 @@ async def process_category_emails(
         
         try:
             cleaned_df = processed_df.copy()
-            
-            # Fill numeric columns with None (which becomes null in JSON)
             numeric_columns = cleaned_df.select_dtypes(include=['float64', 'Float64', 'int64', 'Int64']).columns
             for col in numeric_columns:
                 cleaned_df[col] = cleaned_df[col].where(pd.notna(cleaned_df[col]), None)
-            
-            # Fill string/object columns with empty string
+
             string_columns = cleaned_df.select_dtypes(include=['object', 'string']).columns
             for col in string_columns:
                 cleaned_df[col] = cleaned_df[col].fillna("")
-            
-            # Fill boolean columns with False
+
             bool_columns = cleaned_df.select_dtypes(include=['bool']).columns
             for col in bool_columns:
                 cleaned_df[col] = cleaned_df[col].fillna(False)
@@ -98,17 +93,14 @@ async def process_category_emails(
         except Exception as convert_error:
             raise convert_error
         
-        # Clean up the data for template display - simplified since DataFrame is already properly processed
         processed_emails = []
         try:
             for i, row in enumerate(rows):
                 cleaned_row = {}
                 for key, value in row.items():
-                    # Simple cleanup - just convert to string for HTML display
                     if value is None:
                         cleaned_row[key] = ""
                     else:
-                        # Keep lists as lists for template processing
                         if isinstance(value, list):
                             cleaned_row[key] = value
                         else:
@@ -116,8 +108,7 @@ async def process_category_emails(
                 processed_emails.append(cleaned_row)
         except Exception as cleanup_error:
             raise cleanup_error
-        
-        # Generate and display statistics
+
         stats_data = None
         try:
             stats_data = ds.classifier.statistic(processed_df)
@@ -137,14 +128,17 @@ async def process_category_emails(
             "error_message": f"Processing failed: {str(e)}"
         })
 
-
 @router.post("/category_api", response_model=List[EmailOut])
-async def category_api(emails: List[EmailIn]):
+async def category_api(email_data: List[EmailIn]):
     try:
-        email_df = pd.DataFrame([e.model_dump(by_alias=True) for e in emails])
-
+        if not email_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email data cannot be empty"
+            )
+            
+        email_df = pd.DataFrame([email.model_dump(by_alias=True) for email in email_data])
         ds = EmailDataset(df=email_df)
-
         processed_df = ds.do_connect()
         
         # Use the same DataFrame processing as web interface

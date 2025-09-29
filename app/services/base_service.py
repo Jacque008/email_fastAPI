@@ -1,6 +1,7 @@
 import os
 import regex as reg
 import pandas as pd
+from datetime import datetime
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -11,6 +12,7 @@ class BaseService:
     """
     _data_cache = {}
     _cache_initialized = False
+    _cache_date = None  
 
     def __init__(self):
         env = os.getenv('ENV_MODE', 'local')  
@@ -19,10 +21,13 @@ class BaseService:
             'test': "gs://ml_email_test/fastapi",
             'production': "gs://ml_email_category/fastapi"
         }.get(env, "data/para_tables")
+        current_date = datetime.now().date()
+        cache_expired = BaseService._cache_date != current_date
 
-        if not BaseService._cache_initialized:
+        if not BaseService._cache_initialized or cache_expired:
             self._load_tables()
             BaseService._cache_initialized = True
+            BaseService._cache_date = current_date
         else:
             self._load_from_cache()
 

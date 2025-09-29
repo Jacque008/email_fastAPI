@@ -45,8 +45,9 @@ class ForwardDataset:
                 if existing_columns:
                     email = email.drop(columns=existing_columns)
 
-                forward_query = self.forward_query.format(CONDITION=f"e.id = {id}")
-                adds_on = fetchFromDB(forward_query.format(ID=id))
+                condition = f"e.id = {id}"
+                forward_query = self.forward_query.replace("{CONDITION}", condition)
+                adds_on = fetchFromDB(forward_query)
 
                 if not adds_on.empty:
                     self.df = email.merge(adds_on, on='id', how='left')
@@ -144,17 +145,17 @@ class ForwardDataset:
 
                 if is_link_email:
                     sender = row_data.get('sender', '')
-                    source = row_data.get('source', '')
-                    clinic = row_data.get('receiver', '') 
+                    clinic = row_data.get('receiver', '')
                     journal_number = row_data.get('journalNumber', '')
                     result_data = {
                         'id': int(forwarding_id),
-                        'action': 'Svar',
-                        'forward_address': self._generate_link_address(sender, source),
+                        'action': 'Journalkopia',
+                        'forward_address': self._generate_forward_address(row_data),
                         'forward_subject': self._generate_forward_subject(row_data),
-                        'forward_text': {'Försäkringsbolag': sender,
-                                          'Klinik': clinic,
-                                          'JournalNumber': journal_number}
+                        'forward_text': self._generate_forward_content(row_data),
+                        'journal_data': {'insuranceCompany': sender,
+                                         'clinic': clinic,
+                                         'journalNumber': journal_number}              
                     }
                 else:
                     # Original logic: forwarding
@@ -163,7 +164,8 @@ class ForwardDataset:
                         'action': 'Vidarebefordra',
                         'forward_address': self._generate_forward_address(row_data),
                         'forward_subject': self._generate_forward_subject(row_data),
-                        'forward_text': self._generate_forward_content(row_data)
+                        'forward_text': self._generate_forward_content(row_data),
+                        'journal_data': None
                     }
 
                 results.append(result_data)
