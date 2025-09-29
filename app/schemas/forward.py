@@ -12,7 +12,8 @@ class ForwardingOut(BaseModel):
     action: str = "forwarding"
     forward_address: str = ""
     forward_subject: str = ""
-    forward_text: str = ""
+    forward_text: Optional[str] = None
+    journal_data: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary format"""
@@ -21,5 +22,6 @@ class ForwardingOut(BaseModel):
             "action": self.action,
             "forwardAddress": self.forward_address,
             "forwardSubject": self.forward_subject,
-            "forwardText": self.forward_text
+            "forwardText": self.forward_text,
+            "journalData": self.journal_data
         }

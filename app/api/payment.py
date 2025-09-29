@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from fastapi import APIRouter, Request, HTTPException, status, Form, Depends, UploadFile, File
+from fastapi import APIRouter, Request, HTTPException, status, Depends, UploadFile, File
 from fastapi.templating import Jinja2Templates
 import os
 import json
@@ -56,7 +56,6 @@ async def process_payment_matching(
                 "error": "JSON data must be an object or array of payment objects"
             })
         
-        # Validate and create PaymentIn objects
         payment_objects = []
         for i, payment_data in enumerate(payments_data):
             try:
@@ -84,7 +83,17 @@ async def process_payment_matching(
         if not result_df.empty:
             for _, row in result_df.iterrows():
                 result_data = row.to_dict()
-                clean_data = {k: v for k, v in result_data.items() if not (pd.isna(v) if not isinstance(v, (list, dict)) else False)}
+                clean_data = {}
+                for k, v in result_data.items():
+                    try:
+                        if v is not None and not isinstance(v, (dict, list)):
+                            if not (isinstance(v, (int, float)) and pd.isna(v)):
+                                clean_data[k] = v
+                    except (ValueError, TypeError):
+                        continue
+
+                clean_data.setdefault('insuranceCaseId', [])
+                clean_data.setdefault('status', '')
                 results.append(PaymentOut(**clean_data))
 
         statistics = ds.get_statistics()
@@ -102,10 +111,10 @@ async def process_payment_matching(
             "error": f"Processing failed: {str(e)}"
         })
 
-@router.post("/payment_api", response_model=List[PaymentOut])
+@router.post("/payment_api", response_model=List[Dict[str, Any]])
 async def payment_matching_api(
-    payment_data: List[Dict[str, Any]]
-) -> List[PaymentOut]:
+    payment_data: List[PaymentIn]
+) -> List[Dict[str, Any]]:
     """API endpoint for payment matching - accepts JSON array format
 
     Expected format:
@@ -118,26 +127,7 @@ async def payment_matching_api(
                 detail="Payment data cannot be empty"
             )
 
-        payment_requests = []
-        for i, data in enumerate(payment_data):
-            try:
-                payment_requests.append(PaymentIn(**data))
-            except Exception as e:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid payment data in item {i}: {str(e)}"
-                )
-
-        payment_df = pd.DataFrame([{
-            'id': p.id,
-            'amount': p.amount,
-            'reference': p.reference,
-            'info': p.info,
-            'bankName': p.bankName,
-            'createdAt': p.createdAt
-        } for p in payment_requests])
-
-        # Process payments
+        payment_df = pd.DataFrame([pay.model_dump(by_alias=True) for pay in payment_data])
         ds = PaymentDataset(df=payment_df)
         result_df = ds.do_match()
 
@@ -145,8 +135,20 @@ async def payment_matching_api(
         if not result_df.empty:
             for _, row in result_df.iterrows():
                 result_data = row.to_dict()
-                clean_data = {k: v for k, v in result_data.items() if not (pd.isna(v) if not isinstance(v, (list, dict)) else False)}
-                results.append(PaymentOut(**clean_data))
+                clean_data = {}
+                for k, v in result_data.items():
+                    try:
+                        if v is not None and not isinstance(v, (dict, list)):
+                            if not (isinstance(v, (int, float)) and pd.isna(v)):
+                                clean_data[k] = v
+                    except (ValueError, TypeError):
+                        continue
+
+                clean_data.setdefault('insuranceCaseId', [])
+                clean_data.setdefault('status', '')
+
+                payment_out = PaymentOut(**clean_data)
+                results.append(payment_out.to_dict())
 
         return results
             

@@ -2,8 +2,14 @@ import pandas as pd
 import re
 from typing import Dict, Tuple, Optional, Any, List
 from .base_service import BaseService
-from .utils import fetchFromDB, skip_thinking_part, get_groq_client, tz_convert, groq_chat_with_fallback
 from .processor import Processor
+from .utils import (fetchFromDB,
+                    skip_thinking_part,
+                    get_groq_client,
+                    tz_convert,
+                    groq_chat_with_fallback,
+                    parse_payex_xml)
+
 
 class LogService(BaseService):
     """
@@ -28,9 +34,13 @@ class LogService(BaseService):
         self.log_chat_query = (self.queries['logChat'].iloc[0]).format(COND=self.cond)
         self.log_comment_query = (self.queries['logComment'].iloc[0]).format(COND=self.cond)
         self.log_original_invoice_query = (self.queries['logOriginalInvoice'].iloc[0]).format(COND=self.cond)
+        self.log_vet_fee_query = (self.queries['logVetFee'].iloc[0]).format(COND=self.cond)
+        self.log_payment_option_query = (self.queries['logPaymentOption'].iloc[0]).format(COND=self.cond)
         self.log_invoice_sp_query = (self.queries['logInvoiceSP'].iloc[0]).format(COND=self.cond)
-        self.log_invoice_fo_query = (self.queries['logInvoiceFO'].iloc[0]).format(COND=self.cond)
+        self.log_invoice_fortus_query = (self.queries['logInvoiceFortus'].iloc[0]).format(COND=self.cond)
         self.log_invoice_ka_query = (self.queries['logInvoiceKA'].iloc[0]).format(COND=self.cond)
+        self.log_invoice_fortnox_query = (self.queries['logInvoiceFortnox'].iloc[0]).format(COND=self.cond)
+        self.log_invoice_px_query = (self.queries['logInvoicePayex'].iloc[0]).format(COND=self.cond)
         self.log_receive_query = (self.queries['logReceive'].iloc[0])
         self.log_cancel_query = (self.queries['logCancel'].iloc[0]).format(COND=self.cond)
         self.log_remove_cancel_query = (self.queries['logRemoveCancel'].iloc[0]).format(COND=self.cond)
@@ -157,6 +167,7 @@ class LogService(BaseService):
             "Update_DR": "Compensation Amount Updated (Required)",
             "Chat": "Chat Communication Between Insurance Company, Clinic, and DRP (Optional)",
             "Comment": "Comment Added (Optional)",
+            "Vet_Fee": "Vet fee needs to pay (Optional)",
             "Create_Invoice": "Invoice Generated (Required)",
             "Receive_Payment_From_FB": "Payment Received from Insurance Company (Required)",
             "Receive_Payment_From_DÄ": "Payment Received from animal owner (Required)",
@@ -387,24 +398,65 @@ class LogService(BaseService):
         update = tz_convert(update, 'timestamp')
 
         return update[self.columns]
-    
+     
+    def get_vet_fee_data(self) -> pd.DataFrame:
+        try:
+            vetfee = fetchFromDB(self.log_vet_fee_query)
+            if vetfee.empty:
+                return pd.DataFrame(columns=self.columns)
+        except Exception as e:
+            raise Exception(f"failed fetch data from Database: - {str(e)}")
+
+        vetfee['node'] = 'Vet_Fee'
+        vetfee['source'] = int(vetfee['vetFeeAmount'].iloc[0])
+        vetfee['name'] = vetfee['name'].fillna('').astype(str).str.replace(' levreskontra', '', regex=False).str.strip()
+        vetfee = vetfee.rename(columns={
+            "reference": "itemId",
+            "transTime": "timestamp",
+            "vetFeeAmount": "msg",
+            "name": "involved"
+        }).drop_duplicates()
+        
+        vetfee['itemId'] = vetfee['itemId'].apply(lambda x: f'reference: {x}' if pd.notna(x) else "No vet fee")
+        vetfee['msg'] = vetfee['msg'].apply(lambda x: f"{str(x).replace('-', '')} kr" if pd.notna(x) else "No vet fee")
+        vetfee = tz_convert(vetfee, 'timestamp')
+
+        return vetfee[self.columns]
+        
     def get_invoice_data(self) -> pd.DataFrame:
         """Get and process invoice data from multiple sources"""
-        # Fetch data from all invoice sources in parallel conceptually
-        invoice_queries = [
-            (self.log_invoice_sp_query, "swedbank"),
-            (self.log_invoice_fo_query, "fortus"), 
-            (self.log_invoice_ka_query, "kassa")
-        ]
-        
+        invoice_queries_map = {
+            "swedbank": self.log_invoice_sp_query,
+            "fortus": self.log_invoice_fortus_query,
+            "kassa": self.log_invoice_ka_query, 
+            "datacentralen": self.log_invoice_fortnox_query,
+            "datacentralen12": self.log_invoice_fortnox_query,
+            "payex": self.log_invoice_px_query,
+        }
         invoice_dfs = []
-        for query, source in invoice_queries:
-            try:
-                df = fetchFromDB(query)
-                if not df.empty:
-                    invoice_dfs.append(df)
-            except Exception:
-                continue
+        payment_option_df = fetchFromDB(self.log_payment_option_query)
+        if not payment_option_df.empty:
+            payment_option = payment_option_df['paymentOption'].iloc[0]
+            if payment_option and payment_option in invoice_queries_map:
+                query = invoice_queries_map[payment_option]
+
+                try:
+                    df = fetchFromDB(query)
+                    if not df.empty:
+                        if payment_option == 'payex':
+                            try:
+                                file_name = df['fileName'].iloc[0]
+                                customer_id = df['animalOwnerId'].iloc[0]
+                                file_path = f"payex/incoming/{file_name}"
+                                payex_invoice_df = parse_payex_xml(file_path, customer_id)
+                                df = df.merge(payex_invoice_df, on=['animalOwnerId', 'invoiceNumber'], how='left')
+
+                            except Exception as payex_error:
+                                raise Exception(f"Warning: Payex XML parsing failed: {str(payex_error)}")
+
+                        invoice_dfs.append(df)
+                except Exception as e:
+                    raise Exception(f"failed for fetch data from database: - {str(e)}")
         
         if not invoice_dfs:
             return pd.DataFrame(columns=self.columns)
@@ -510,6 +562,133 @@ class LogService(BaseService):
         remove = tz_convert(remove, 'timestamp')
 
         return remove[self.columns]
+    
+    def create_formatted_log(self, base: pd.DataFrame, *log_dfs) -> Tuple[Dict, Dict]:
+        """Create formatted chronological log with optimized processing"""
+        def filter_columns(df):
+            return df.loc[:, df.notna().any()] if not df.empty else df
+
+        processed_dfs = [filter_columns(df) for df in log_dfs if not df.empty]
+        
+        if not processed_dfs:
+            return {}, {}
+        
+        log = pd.concat(processed_dfs, ignore_index=True).drop_duplicates()
+        log = log.merge(base[['errandId', 'clinicId', 'clinicName', 'insuranceCompanyName', 'complete']], on='errandId')
+        
+        float_cols = log.select_dtypes(include=['float64']).columns
+        log[float_cols] = log[float_cols].astype('Int64')
+        
+        log = log[['errandId', 'node', 'timestamp', 'itemId', 'msg', 'involved', 
+                  'source', 'clinicId', 'clinicName', 'insuranceCompanyName', 'complete']].sort_values('timestamp')
+        
+        grouped = log.groupby('errandId')
+        group_log, group_ai = {}, {}
+        
+        for group_id, group_df in grouped:
+            group_df = group_df.sort_values('timestamp').reset_index(drop=True).copy()
+            complete_nodes = group_df['node'].drop_duplicates().to_list()
+
+            clinic_id = group_df['clinicId'].iloc[0]
+            drp_fee_query = f'SELECT (c."apoexFeeAmount" / 100) AS "drp_fee"  FROM clinic c WHERE c.id = {clinic_id}'
+            clinic_drp_fee_df = fetchFromDB(drp_fee_query)
+            drp_fee = int(clinic_drp_fee_df['drp_fee'].iloc[0]) if not clinic_drp_fee_df.empty else 199
+
+            paragraph, discrepancy = self._generate_chronologic_log(group_id, group_df, drp_fee)
+            if discrepancy == 0:
+                title = f"Ärenden: {group_id} °Betalningsavvikelse: Nej§"
+            else:
+                title = f"Ärenden: {group_id} °Betalningsavvikelse: {int(discrepancy)}kr§"
+            
+            paragraph = title + "\n\n" + paragraph[len(f"Ärenden: {group_id}\n\n"):]
+            
+            formatted_log = self._format_for_html(paragraph)
+
+            group_log[group_id] = {
+                "title": formatted_log.split('°', 1)[0],
+                "content": formatted_log.split('§', 1)[1]
+            }
+            errand_complete = group_df['complete'].iloc[0]
+
+            clean_text = self._clean_before_feed_in_model(paragraph)
+            ai_analysis = self.generate_risk_assessment(clean_text, errand_complete, complete_nodes)
+            group_ai[group_id] = self._format_ai_analysis(ai_analysis)
+        
+        return group_log, group_ai
+    
+    def _generate_chronologic_log(self, group_id: Any, group_df: pd.DataFrame, drp_fee: int) -> Tuple[str, float]:
+        """Generate log content for a specific errand group"""
+        paragraph = f"Ärenden: {group_id}\n\n"
+        origin_invoice = fetchFromDB(self.log_original_invoice_query)
+        discrepancy = origin_invoice['invoiceAmount'].sum() + drp_fee
+        date_cache = {}
+        placeholder = '€' * 11
+        
+        for idx, (_, row) in enumerate(group_df.iterrows()):
+            
+            timestamp_str = str(row['timestamp'])
+            time_part = timestamp_str[11:16] if len(timestamp_str) >= 16 else timestamp_str[11:]
+            date_cache[idx] = timestamp_str[:10]
+            if idx > 0 and (idx - 1) in date_cache and date_cache[idx] == date_cache[idx - 1]:
+                show_date = f'• At {time_part}'
+            else:
+                show_date = '(COLORBLUE)' + date_cache[idx] + '(/SPAN)\n• At ' + time_part
+            
+            if row['node'] == 'Errand_Created':
+                paragraph += f"{show_date} (BOLD)Direktregleringsärendet skapades av klinik (COLORRED){row['involved']}(/SPAN).(/BOLD)\n"
+            
+            elif row['node'] == 'Send_To_IC':
+                paragraph += f"{show_date} (BOLD)Direktregleringsärendet skickades till försäkringsbolag (COLORRED){row['involved']}(/SPAN).(/BOLD)\n"
+            
+            elif row['node'] == 'Update_DR':
+                paragraph += f"{show_date} (BOLD)Direktregleringsärendet uppdaterade ersättningsbeloppet (COLORRED){row['msg']}(/SPAN) {row['involved']}.(/BOLD)\n"
+            
+            elif row['node'] == 'Email':
+                format_msg = self._format_conversation_msg(row['msg'], 300, placeholder, is_email=True)
+                if row['source'] == 'Clinic':
+                    paragraph += f"{show_date} (BOLD)Klinik skickade ett (COLORRED){row['involved']}(/SPAN) emejl med följande innehåll:(/BOLD)\n{placeholder}(ITALIC)(COLORGRAY){format_msg}(/SPAN)(/ITALIC)\n"
+                elif row['source'] == 'Insurance_Company':
+                    paragraph += f"{show_date} (BOLD)Försäkringsbolag skickade ett (COLORRED){row['involved']}(/SPAN) emejl med följande innehåll:(/BOLD)\n{placeholder}(ITALIC)(COLORGRAY){format_msg}(/SPAN)(/ITALIC)\n"
+                else:
+                    paragraph += f"{show_date} (BOLD){row['source']} skickade ett (COLORRED){row['involved']}(/SPAN) emejl med följande innehåll:(/BOLD)\n{placeholder}(ITALIC)(COLORGRAY){format_msg}(/SPAN)(/ITALIC)\n"
+            
+            elif row['node'] == 'Chat':
+                format_msg = self._format_conversation_msg(row['msg'], 300, placeholder)
+                paragraph += f"{show_date} (BOLD)(COLORRED){row['involved']}(/SPAN) skickade ett chattmeddelande:(/BOLD)\n{placeholder}(ITALIC)(COLORGRAY){format_msg}(/SPAN)(/ITALIC)\n"
+            
+            elif row['node'] == 'Comment':
+                format_msg = self._format_conversation_msg(row['msg'], 300, placeholder)
+                paragraph += f"{show_date} (BOLD)(COLORRED){row['involved']}(/SPAN) lämnade en kommentar:(/BOLD) \n{placeholder}(ITALIC)(COLORGRAY){format_msg}(/SPAN)(/ITALIC)\n"
+            
+            elif row['node'] == 'Vet_Fee':
+                paragraph += f"{show_date} (BOLD)En veterinäravgift på (COLORRED){row['msg']}(/SPAN) skapades för klinik (COLORRED){row['involved']}(/SPAN).(/BOLD)\n"
+                discrepancy += abs(row['source'])
+                
+            elif row['node'] == 'Create_Invoice':
+                paragraph += f"{show_date} (BOLD)En (COLORRED){row['involved']}(/SPAN) faktura skapades för (COLORRED){row['msg']}(/SPAN).(/BOLD)\n"
+            
+            elif row['node'] == 'Receive_Payment_From_FB':
+                paragraph += f"{show_date} (BOLD)Mottog betalning på (COLORRED){row['msg']}(/SPAN) från försäkringsbolag((COLORRED){row['involved']}(/SPAN)).(/BOLD)\n"
+                discrepancy -= abs(row['source'])
+
+            elif row['node'] == 'Receive_Payment_From_DÄ':
+                paragraph += f"{show_date} (BOLD)Mottog betalning på (COLORRED){row['msg']}(/SPAN) från djurägare((COLORRED){row['involved']}(/SPAN)).(/BOLD)\n"
+                discrepancy -= abs(row['source'])
+
+            elif row['node'] == 'Pay_Out_To_CLinic':
+                paragraph += f"{show_date} (BOLD)Betalade (COLORRED){row['msg']}(/SPAN) till klinik (COLORRED){row['involved']}(/SPAN).(/BOLD)\n"
+            
+            elif row['node'] == 'Pay_Back_To_Customer':
+                paragraph += f"{show_date} (BOLD)Återbetalade (COLORRED){row['msg']}(/SPAN) till djurägare (COLORRED){row['involved']}(/SPAN).(/BOLD)\n"
+                discrepancy -= abs(row['source'])
+            
+            elif row['node'] == 'Errand_Cancellation':
+                paragraph += f"{show_date} (BOLD)Direktregleringsärendet avslutades.(/BOLD)\n"
+            
+            elif row['node'] == 'Errand_Cancellation_Reversed':
+                paragraph += f"{show_date} (BOLD)Direktregleringsärendet återaktiverades.(/BOLD)\n"
+        
+        return paragraph, discrepancy
     
     def generate_risk_assessment(self, doc_text: str, errand_complete: bool, completed_nodes: Optional[List[str]] = None) -> str:
         """Generate AI risk assessment with automatic model switching on rate limits"""
@@ -687,131 +866,6 @@ class LogService(BaseService):
 
         return "Avsluta ärendet"
 
-    def create_formatted_log(self, base: pd.DataFrame, *log_dfs) -> Tuple[Dict, Dict]:
-        """Create formatted chronological log with optimized processing"""
-        def filter_columns(df):
-            return df.loc[:, df.notna().any()] if not df.empty else df
-
-        processed_dfs = [filter_columns(df) for df in log_dfs if not df.empty]
-        
-        if not processed_dfs:
-            return {}, {}
-        
-        log = pd.concat(processed_dfs, ignore_index=True).drop_duplicates()
-        log = log.merge(base[['errandId', 'clinicId', 'clinicName', 'insuranceCompanyName', 'complete']], on='errandId')
-        
-        float_cols = log.select_dtypes(include=['float64']).columns
-        log[float_cols] = log[float_cols].astype('Int64')
-        
-        log = log[['errandId', 'node', 'timestamp', 'itemId', 'msg', 'involved', 
-                  'source', 'clinicId', 'clinicName', 'insuranceCompanyName', 'complete']].sort_values('timestamp')
-        
-        grouped = log.groupby('errandId')
-        group_log, group_ai = {}, {}
-        
-        for group_id, group_df in grouped:
-            group_df = group_df.sort_values('timestamp').reset_index(drop=True).copy()
-            complete_nodes = group_df['node'].drop_duplicates().to_list()
-
-            clinic_id = group_df['clinicId'].iloc[0]
-            drp_fee = 149 if clinic_id in self.lappland_ids else 199
-            
-            paragraph, discrepancy = self._generate_chronologic_log(group_id, group_df, drp_fee)
-            if discrepancy == 0:
-                title = f"Ärenden: {group_id} °Betalningsavvikelse: Nej§"
-            else:
-                title = f"Ärenden: {group_id} °Betalningsavvikelse: {int(discrepancy)}kr§"
-            
-            paragraph = title + "\n\n" + paragraph[len(f"Ärenden: {group_id}\n\n"):]
-            
-            formatted_log = self._format_for_html(paragraph)
-
-            group_log[group_id] = {
-                "title": formatted_log.split('°', 1)[0],
-                "content": formatted_log.split('§', 1)[1]
-            }
-            errand_complete = group_df['complete'].iloc[0]
-
-            clean_text = self._clean_before_feed_in_model(paragraph)
-            ai_analysis = self.generate_risk_assessment(clean_text, errand_complete, complete_nodes)
-            group_ai[group_id] = self._format_ai_analysis(ai_analysis)
-        
-        return group_log, group_ai
-    
-    def _generate_chronologic_log(self, group_id: Any, group_df: pd.DataFrame, drp_fee: int) -> Tuple[str, float]:
-        """Generate log content for a specific errand group"""
-        paragraph = f"Ärenden: {group_id}\n\n"
-        original_invoice = fetchFromDB(self.log_original_invoice_query)
-        if not original_invoice.empty:
-            discrepancy = abs(original_invoice['invoiceAmount'].iloc[0]) + drp_fee
-        else:
-            discrepancy = drp_fee
-        date_cache = {}
-        placeholder = '€' * 11
-        
-        for idx, (_, row) in enumerate(group_df.iterrows()):
-            
-            timestamp_str = str(row['timestamp'])
-            time_part = timestamp_str[11:16] if len(timestamp_str) >= 16 else timestamp_str[11:]
-            date_cache[idx] = timestamp_str[:10]
-            if idx > 0 and (idx - 1) in date_cache and date_cache[idx] == date_cache[idx - 1]:
-                show_date = f'• At {time_part}'
-            else:
-                show_date = '(COLORBLUE)' + date_cache[idx] + '(/SPAN)\n• At ' + time_part
-            
-            if row['node'] == 'Errand_Created':
-                paragraph += f"{show_date} (BOLD)Direktregleringsärendet skapades av klinik (COLORRED){row['involved']}(/SPAN).(/BOLD)\n"
-            
-            elif row['node'] == 'Send_To_IC':
-                paragraph += f"{show_date} (BOLD)Direktregleringsärendet skickades till försäkringsbolag (COLORRED){row['involved']}(/SPAN).(/BOLD)\n"
-            
-            elif row['node'] == 'Update_DR':
-                paragraph += f"{show_date} (BOLD)Direktregleringsärendet uppdaterade ersättningsbeloppet (COLORRED){row['msg']}(/SPAN) {row['involved']}.(/BOLD)\n"
-            
-            elif row['node'] == 'Email':
-                format_msg = self._format_conversation_msg(row['msg'], 300, placeholder, is_email=True)
-                if row['source'] == 'Clinic':
-                    paragraph += f"{show_date} (BOLD)Klinik skickade ett (COLORRED){row['involved']}(/SPAN) emejl med följande innehåll:(/BOLD)\n{placeholder}(ITALIC)(COLORGRAY){format_msg}(/SPAN)(/ITALIC)\n"
-                elif row['source'] == 'Insurance_Company':
-                    paragraph += f"{show_date} (BOLD)Försäkringsbolag skickade ett (COLORRED){row['involved']}(/SPAN) emejl med följande innehåll:(/BOLD)\n{placeholder}(ITALIC)(COLORGRAY){format_msg}(/SPAN)(/ITALIC)\n"
-                else:
-                    paragraph += f"{show_date} (BOLD){row['source']} skickade ett (COLORRED){row['involved']}(/SPAN) emejl med följande innehåll:(/BOLD)\n{placeholder}(ITALIC)(COLORGRAY){format_msg}(/SPAN)(/ITALIC)\n"
-            
-            elif row['node'] == 'Chat':
-                format_msg = self._format_conversation_msg(row['msg'], 300, placeholder)
-                paragraph += f"{show_date} (BOLD)(COLORRED){row['involved']}(/SPAN) skickade ett chattmeddelande:(/BOLD)\n{placeholder}(ITALIC)(COLORGRAY){format_msg}(/SPAN)(/ITALIC)\n"
-            
-            elif row['node'] == 'Comment':
-                format_msg = self._format_conversation_msg(row['msg'], 300, placeholder)
-                paragraph += f"{show_date} (BOLD)(COLORRED){row['involved']}(/SPAN) lämnade en kommentar:(/BOLD) \n{placeholder}(ITALIC)(COLORGRAY){format_msg}(/SPAN)(/ITALIC)\n"
-            
-            elif row['node'] == 'Create_Invoice':
-                paragraph += f"{show_date} (BOLD)En (COLORRED){row['involved']}(/SPAN) faktura skapades för {row['msg']}.(/BOLD)\n"
-            
-            elif row['node'] == 'Receive_Payment_From_FB':
-                paragraph += f"{show_date} (BOLD)Mottog betalning på (COLORRED){row['msg']}(/SPAN) från försäkringsbolag((COLORRED){row['involved']}(/SPAN)).(/BOLD)\n"
-                discrepancy -= abs(row['source'])
-            
-            elif row['node'] == 'Receive_Payment_From_DÄ':
-                paragraph += f"{show_date} (BOLD)Mottog betalning på (COLORRED){row['msg']}(/SPAN) från djurägare((COLORRED){row['involved']}(/SPAN)).(/BOLD)\n"
-                discrepancy -= abs(row['source'])
-            
-            elif row['node'] == 'Pay_Out_To_CLinic':
-                paragraph += f"{show_date} (BOLD)Betalade (COLORRED){row['msg']}(/SPAN) till klinik (COLORRED){row['involved']}(/SPAN).(/BOLD)\n"
-                discrepancy -= abs(row['source'])
-            
-            elif row['node'] == 'Pay_Back_To_Customer':
-                paragraph += f"{show_date} (BOLD)Återbetalade (COLORRED){row['msg']}(/SPAN) till djurägare (COLORRED){row['involved']}(/SPAN).(/BOLD)\n"
-                discrepancy -= abs(row['source'])
-            
-            elif row['node'] == 'Errand_Cancellation':
-                paragraph += f"{show_date} (BOLD)Direktregleringsärendet avslutades.(/BOLD)\n"
-            
-            elif row['node'] == 'Errand_Cancellation_Reversed':
-                paragraph += f"{show_date} (BOLD)Direktregleringsärendet återaktiverades.(/BOLD)\n"
-        
-        return paragraph, discrepancy
-    
     def _format_conversation_msg(self, msg: str, max_length: int, placeholder: str, is_email: bool = False) -> str:
         """
         Clean and format content for email, chat, and comment nodes.
@@ -916,3 +970,4 @@ class LogService(BaseService):
         formatted = formatted.replace('<p><br></p>', '')
         
         return formatted
+    

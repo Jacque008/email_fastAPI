@@ -72,10 +72,7 @@ async def update_clinic(
         ).reset_index(drop=True)
 
         clinic_new.loc[:,'clinicName'] = clinic_new.loc[:,'clinicName'].str.strip()
-
-        # Write back to storage (handle GCS and local differently)
         clinic_csv_path = f"{base_service.folder}/clinic.csv"
-
         if clinic_csv_path.startswith("gs://"):
             try:
                 from google.cloud import storage

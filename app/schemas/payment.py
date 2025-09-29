@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 import regex as reg
@@ -36,19 +36,19 @@ class PaymentIn(BaseModel):
 
 class PaymentOut(PaymentIn):
     """Output schema for payment matching results - inherits from PaymentIn"""
-    # Override amount to be formatted string instead of int
     amount: str  # formatted as "X.XX kr"
-    
-    # Matched info
     insuranceCaseId: List[int] = Field(default_factory=list)
     status: str = ""
-    
-    # Internal matching data (optional for API response)
-    valPay: List[str] = Field(default_factory=list)
-    valErrand: List[str] = Field(default_factory=list)
-    isReference: List[str] = Field(default_factory=list)
-    referenceLink: List[str] = Field(default_factory=list)
-    settlementAmount: float = 0.0
-    extractReference: Optional[str] = None
-    extractDamageNumber: Optional[str] = None
-    extractOtherNumber: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary format, excluding commented fields"""
+        return {
+            "id": self.id,
+            "bankName": self.bankName,
+            "amount": self.amount,
+            "info": self.info,
+            "reference": self.reference,
+            "createdAt": self.createdAt,
+            "insuranceCaseId": self.insuranceCaseId,
+            "status": self.status
+        }

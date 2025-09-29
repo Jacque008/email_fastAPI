@@ -34,43 +34,38 @@ class LogDataset:
                 errand_number = row.get('errand_number')
                 if not errand_number:
                     continue
-
-                # Step 1: Setup query conditions in the service
+                
                 self.log_service.setup_query_conditions(errand_number)
-
-                # Step 2: Get base errand data
                 base_data = self.log_service.get_errand_base_data()
 
                 if base_data.empty:
                     error_result = {
-                        'errand_id': 0,
-                        'log_title': f"Errand {errand_number} not found",
-                        'log_content': "No data found for the specified criteria",
-                        'ai_analysis': "No analysis available - no data found",
-                        'error_message': f"No errand found with number: {errand_number}"
+                        'Title': f"Errand {errand_number} not found",
+                        'Chronological_Log': "No data found for the specified criteria",
+                        'AI_Analysis': "No analysis available - no data found",
+                        'error_message': f"No errand found with number: {errand_number}",
+                        'Error_Combined_Info': f"No errand found with number: {errand_number}",
+                        'Summary_Combined_Info': None
                     }
                     results.append(error_result)
                     continue
 
                 errand_id = base_data['errandId'].iloc[0]
-
-                # Step 3: Generate all log components
                 log_components = self._generate_all_log_components(base_data)
 
-                # Step 4: Create formatted chronological log
                 group_log, group_ai = self.log_service.create_formatted_log(
                     base_data,
                     *log_components
                 )
-
-                # Step 5: Extract results for the specific errand
+                
                 if errand_id not in group_log or errand_id not in group_ai:
                     error_result = {
-                        'errand_id': errand_id,
-                        'log_title': f"Errand {errand_number}",
-                        'log_content': "No log entries found for this errand",
-                        'ai_analysis': "No analysis available - no log entries found",
-                        'error_message': "No log entries generated for this errand"
+                        'Title': f"Errand {errand_number}",
+                        'Chronological_Log': "No log entries found for this errand",
+                        'AI_Analysis': "No analysis available - no log entries found",
+                        'error_message': "No log entries generated for this errand",
+                        'Error_Combined_Info': "No log entries generated for this errand",
+                        'Summary_Combined_Info': None
                     }
                     results.append(error_result)
                     continue
@@ -79,21 +74,23 @@ class LogDataset:
                 ai_analysis = group_ai[errand_id]
 
                 result = {
-                    'errand_id': errand_id,
-                    'log_title': log_data["title"],
-                    'log_content': log_data["content"],
-                    'ai_analysis': ai_analysis,
-                    'error_message': None
+                    'Title': log_data["title"],
+                    'Chronological_Log': log_data["content"],
+                    'AI_Analysis': ai_analysis,
+                    'error_message': None,
+                    'Error_Combined_Info': None,
+                    'Summary_Combined_Info': log_data["content"]  # Use log content as summary when no error
                 }
                 results.append(result)
 
             except Exception as e:
                 error_result = {
-                    'errand_id': 0,
-                    'log_title': f"Error processing {errand_number}",
-                    'log_content': "An error occurred while generating the log",
-                    'ai_analysis': "No analysis available due to processing error",
-                    'error_message': f"Processing error: {str(e)}"
+                    'Title': f"Error processing {errand_number}",
+                    'Chronological_Log': "An error occurred while generating the log",
+                    'AI_Analysis': "No analysis available due to processing error",
+                    'error_message': f"Processing error: {str(e)}",
+                    'Error_Combined_Info': f"Processing error: {str(e)}",
+                    'Summary_Combined_Info': None
                 }
                 results.append(error_result)
 
@@ -136,12 +133,14 @@ class LogDataset:
         if not chat_log.empty:
             components.append(chat_log)
 
-        # Get comment data
         comment_log = self.log_service.get_comment_data(base_data)
         if not comment_log.empty:
             components.append(comment_log)
 
-        # Get invoice data
+        vet_fee_log = self.log_service.get_vet_fee_data()
+        if not vet_fee_log.empty:
+            components.append(vet_fee_log)
+            
         invoice_log = self.log_service.get_invoice_data()
         if not invoice_log.empty:
             components.append(invoice_log)
@@ -162,22 +161,6 @@ class LogDataset:
             components.append(remove_cancel_log)
         
         return components
-    
-    # def do_batch_logs(self, log_df: pd.DataFrame) -> pd.DataFrame:
-    #     """
-    #     Process batch log generation directly from DataFrame
-
-    #     Args:
-    #         log_df: DataFrame with columns ['errand_number']
-
-    #     Returns:
-    #         DataFrame with log results
-    #     """
-    #     if log_df.empty:
-    #         return pd.DataFrame()
-
-    #     self.df = log_df.copy()
-    #     return self.do_chronological_log()
 
     def get_statistics(self) -> pd.DataFrame:
         """
@@ -199,7 +182,6 @@ class LogDataset:
         for _, row in result_df.iterrows():
             if row.get('error_message'):
                 stats = {
-                    "errand_id": row.get('errand_id', 0),
                     "has_error": True,
                     "error_message": row.get('error_message'),
                     "entry_count": 0,
@@ -207,19 +189,18 @@ class LogDataset:
                 }
             else:
                 # Count log entries (approximate based on bullet points)
-                log_content = row.get('log_content', '')
+                log_content = row.get('Chronological_Log', '')
                 entry_count = log_content.count("• At") if log_content else 0
 
                 # Check if AI analysis indicates high risk
-                ai_analysis = row.get('ai_analysis', '')
+                ai_analysis = row.get('AI_Analysis', '')
                 has_high_risk = "Hög" in ai_analysis if ai_analysis else False
 
                 # Check for payment discrepancies
-                log_title = row.get('log_title', '')
+                log_title = row.get('Title', '')
                 has_payment_discrepancy = "Betalningsavvikelse:" in log_title and "Nej" not in log_title
 
                 stats = {
-                    "errand_id": row.get('errand_id', 0),
                     "has_error": False,
                     "error_message": None,
                     "entry_count": entry_count,
