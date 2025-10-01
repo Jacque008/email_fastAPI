@@ -1,6 +1,6 @@
 from __future__ import annotations
 import pandas as pd
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from dataclasses import dataclass, field
 from ..services.utils import fetchFromDB
 from ..services.services import DefaultServices
@@ -26,7 +26,13 @@ class ForwardDataset:
         self.forward_service = self.services.get_forwarder()
         self.addressResolver = self.services.get_addressResolver()
         self.forward_query = self.base_service.queries['forwardSummaryInfo'].iloc[0]
-    
+        self.journal_contact_query = self.base_service.queries['forwardJournalContact'].iloc[0]
+        self.journal_contact_df = fetchFromDB(self.journal_contact_query)
+        fw_cates = self.base_service.forward_suggestion[
+            self.base_service.forward_suggestion['action'].str.endswith('_Template')].action.to_list()
+        self.fw_cates = [item.replace('_Template', '') for item in fw_cates]
+
+
     def enrich_email_data(self) -> "ForwardDataset":
         """Enrich internal DataFrame with email data from database - returns self for chaining"""
         try:
@@ -34,31 +40,34 @@ class ForwardDataset:
                 id = self.df.iloc[0]['id']
 
                 email_spec_query = self.base_service.queries['emailSpec'].iloc[0]
-                bas_email = fetchFromDB(email_spec_query.format(EMAILID=id))
+                bas_email = fetchFromDB(email_spec_query.format(COND=(f"e.id = {id}")))
                 ds = EmailDataset(df=bas_email, services=self.services)
                 email = ds.do_preprocess()
 
                 email = email.copy()
                 email.loc[:,'userId'] = self.df.iloc[0]['userId']
                 columns_to_drop = ['receiver','errandId','reference','sender']
-                existing_columns = [col for col in columns_to_drop if col in email.columns]
-                if existing_columns:
-                    email = email.drop(columns=existing_columns)
+                email = email.drop(columns=columns_to_drop)
 
-                condition = f"e.id = {id}"
-                forward_query = self.forward_query.replace("{CONDITION}", condition)
+                forward_query = self.forward_query.format(COND=(f"e.id = {id}"))
                 adds_on = fetchFromDB(forward_query)
 
                 if not adds_on.empty:
+                    category = adds_on['correctedCategory'].iloc[0]
+                    if category not in self.fw_cates:
+                        self.error = f"Category '{category}' is not a forwardable category"
+                        return self
                     self.df = email.merge(adds_on, on='id', how='left')
 
         except Exception as e:
-            print(f"❌ enrich_email_data error: {str(e)}")
-            raise
+            raise Exception(f"❌ enrich_email_data error: {str(e)}")
+
         return self
     
     def clean_email_content(self) -> "ForwardDataset":
         """Clean email content data"""
+        if hasattr(self, 'error') and self.error:
+            return self
         try:
             if 'email' in self.df.columns:
                 self.df['email'] = self.df['email'].str.replace(r'\n\n+', '\n', regex=True)
@@ -83,8 +92,8 @@ class ForwardDataset:
             return self.forward_service.generate_forwarding_subject(
                 email=email,
                 category=category,
-                reference=row_data.get('reference', ''),
-                sender=row_data.get('sender', '')
+                reference=row_data.get('reference', '') or '',
+                sender=row_data.get('sender') or 'avsändaren'
             )
         except Exception:
             return ""
@@ -101,21 +110,72 @@ class ForwardDataset:
         except Exception:
             return ""
 
-    def _generate_link_address(self, sender: str, source: str) -> str:
+    def _generate_link_special(self, row_data: Dict[str, Any]) -> Dict[str, Any]:
         """Find reply address for sender - looks up sender in clinic or insurance company databases"""
-        try:
-            if (source == 'Insurance_Company') and (not self.base_service.fb.empty):
-                fb_match = self.base_service.fb[
-                    self.base_service.fb['insuranceCompany'].str.lower() == sender.lower()
-                ]
-                if not fb_match.empty:
-                    return fb_match.iloc[0]['forwardAddress']
+        journal_data: Optional[Dict[str, Any]] = None
+        action = 'Journalkopia'
+        fb_journal_contact_id = None
 
-            return ""
+        try:
+            mask = self.journal_contact_df['insuranceCompanyId']==row_data['insuranceCompanyId']
+            contact = self.journal_contact_df.loc[mask]
+            if not contact.empty:
+                if contact.shape[0]==1:
+                    fb_journal_contact_id = contact['id'].iloc[0]
+                elif pd.notna(row_data.get('kind')):
+                    if row_data['insuranceCompanyId']==4: # Sveland
+                        if row_data['kind'].lower() == 'häst':
+                            fb_journal_contact_id = 9
+                        else:
+                            fb_journal_contact_id = 8
+                    elif row_data['insuranceCompanyId']==5: # Agria
+                        if row_data['kind'].lower() == 'häst':
+                            fb_journal_contact_id = 14
+                        else:
+                            fb_journal_contact_id = 12
+                    elif row_data['insuranceCompanyId']==7: # Dina
+                        if row_data['kind'].lower() in ['hund','katt']:
+                            fb_journal_contact_id = 2
+                        elif row_data['kind'].lower() == 'häst':
+                            fb_journal_contact_id = 3
+                        else:
+                            action = 'Vidarebefordra'
+                            fb_journal_contact_id = None    
+                else:
+                    action = 'Vidarebefordra'
+                    fb_journal_contact_id = None          
+            else:
+                action = 'Vidarebefordra'
+                fb_journal_contact_id = None
+
+            if (fb_journal_contact_id is not None):
+                journal_data = {
+                        'insuranceCompany': int(fb_journal_contact_id),
+                        'clinic': int(row_data.get('clinicId')) if pd.notna(row_data.get('clinicId')) else None,
+                        'journalNumber': str(row_data.get('journalNumber')) if pd.notna(row_data.get('journalNumber')) else None
+                    }
+                
+            result_data = {
+                        'id': int(row_data['id']),
+                        'action': action,
+                        'forward_address': self._generate_forward_address(row_data),
+                        'forward_subject': self._generate_forward_subject(row_data),
+                        'forward_text': self._generate_forward_content(row_data),
+                        'journal_data': journal_data             
+                    }
+            
+            return result_data
 
         except Exception as e:
-            print(f"❌ Error in _generate_link_address: {str(e)}")
-            return ""
+            print(f"❌ Error in _generate_link_special: {str(e)}")
+            return {
+                'id': int(row_data.get('id', 0)),
+                'action': 'Vidarebefordra',
+                'forward_address': '',
+                'forward_subject': '',
+                'forward_text': '',
+                'journal_data': None
+            }
 
     def do_forward(self) -> pd.DataFrame:
         """Perform forwarding on the internal DataFrame - main processing method
@@ -124,12 +184,21 @@ class ForwardDataset:
             DataFrame with forwarding results
         """
         if self.df.empty:
-            return pd.DataFrame()
+            return pd.DataFrame([{
+                'id': 0,
+                'error': "No forwarding info found"
+                }])
 
         try:
             (self.enrich_email_data()
-                .clean_email_content())
-            
+                 .clean_email_content())
+
+            if hasattr(self, 'error') and self.error:
+                return pd.DataFrame([{
+                    'id': int(self.df.iloc[0]['id']) if not self.df.empty else 0,
+                    'error': self.error
+                }])
+
             results = []
             for _, row in self.df.iterrows():
                 forwarding_id = row.get('id')
@@ -137,28 +206,14 @@ class ForwardDataset:
                     continue
 
                 row_data = row.to_dict()
-
-                # Check if meets special conditions for new feature (Link emails only)
-                # Only use new feature for specific Link email IDs or check if linkJournalTenant has a specific value
-                is_link_email = (row_data.get('correctedCategory') == 'Complement_DR_Insurance_Company' and
-                               pd.notna(row_data.get('linkJournalTenant')))
+                is_link_email = (row_data.get('correctedCategory') == 'Complement_DR_Insurance_Company'
+                                 and pd.notna(row_data.get('linkJournalTenant')) 
+                                 and pd.notna(row_data.get('journalNumber')))
 
                 if is_link_email:
-                    sender = row_data.get('sender', '')
-                    clinic = row_data.get('receiver', '')
-                    journal_number = row_data.get('journalNumber', '')
-                    result_data = {
-                        'id': int(forwarding_id),
-                        'action': 'Journalkopia',
-                        'forward_address': self._generate_forward_address(row_data),
-                        'forward_subject': self._generate_forward_subject(row_data),
-                        'forward_text': self._generate_forward_content(row_data),
-                        'journal_data': {'insuranceCompany': sender,
-                                         'clinic': clinic,
-                                         'journalNumber': journal_number}              
-                    }
+                    result_data = self._generate_link_special(row_data)
+                    
                 else:
-                    # Original logic: forwarding
                     result_data = {
                         'id': int(forwarding_id),
                         'action': 'Vidarebefordra',

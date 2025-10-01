@@ -27,16 +27,20 @@ id,stopWords
 26,Information Ifs telefontider.\s+
 27,"\[Warning\] - This is an external email, please be cautious when opening links and attachments!"
 28,Skickat från Outlook
-29,Från:.*\nSkickat:.*\nTill:.*\nÄmne:.*(?=\n)
-30,Från:.*\nDatum:.*\nTill:.*\nÄmne:.*(?=\n)
-31,From:.*\nSent:.*\nTo:.*\nSubject:.*(?=\n)
-32,Direktregleringsportalen\s*Ser mailet konstigt ut\? Klicka här
-33,"(?<=\n)Den[\d\wåöä\-:\.,+(kl) ]+skrev[\wÅÖÄåöä\-\.\s]+(DRP)? *(<.*@.*>)?:?(?=\n)"
-34,(?<=\n)På[\d\wåöä\-: ]+CEST skrev\s+[\wÅÖÄåöä\-\.\s]+(DRP)?\s*(<.*@.*>)?:?(?=\n)
-35,(?<=\n)[\d\wåöä\-:\. ]+skrev[\wÅÖÄåöä\-\.\s]+DRP\s*(<.*@.*>)?:(?=\n)
-36,(?<=\n)[\d\-:\. ]+skrev[\wÅÖÄåöä\-\.\s]+(DRP|Direktregleringsportalen):(?=\n)
-37,(?<=\n)Den[\wåöä\d:<>@\.\s]+skrev:(?=\n)
-38,(?<=\n)On .*? wrote:
-39,"\sHälsningar,?\s"
-40,"\s(Vänligen|Hälsar),?\n"
-41,"\sVänligen,\s"
+29,Direktregleringsportalen\nVerifiera din e-post hos Direktregleringsportalen
+30,"Dina Försäkring AB\s+Industrigatan 23, 262 66 Ängelholm"
+31,Skadereglerare\s+Dina Försäkring AB
+32,Från:.*\nSkickat:.*\nTill:.*\nÄmne:.*(?=\n)
+33,Från:.*\nDatum:.*\nTill:.*\nÄmne:.*(?=\n)
+34,From:.*\nSent:.*\nTo:.*\nSubject:.*(?=\n)
+35,Direktregleringsportalen\s*Ser mailet konstigt ut\? Klicka här
+36,"(?<=\n)Den[\d\wåöä\-:\.,+(kl) ]+skrev[\wÅÖÄåöä\-\.\s]+(DRP)? *(<.*@.*>)?:?(?=\n)"
+37,(?<=\n)På[\d\wåöä\-: ]+CEST skrev\s+[\wÅÖÄåöä\-\.\s]+(DRP)?\s*(<.*@.*>)?:?(?=\n)
+38,(?<=\n)[\d\wåöä\-:\. ]+skrev[\wÅÖÄåöä\-\.\s]+DRP\s*(<.*@.*>)?:(?=\n)
+39,(?<=\n)[\d\-:\. ]+skrev[\wÅÖÄåöä\-\.\s]+(DRP|Direktregleringsportalen):(?=\n)
+40,(?<=\n)[\w\-:\. ]+skrev (?=DRP|Direktregleringsportalen).*?(?=:\n)
+41,(?<=\n)Den[\wåöä\d:<>@\.\s]+skrev:(?=\n)
+42,(?<=\n)On .*? wrote:
+43,"\sHälsningar,?\s"
+44,"\s(Vänligen|Hälsar),?\n"
+45,"\sVänligen,\s"

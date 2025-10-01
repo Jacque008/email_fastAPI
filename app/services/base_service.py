@@ -93,11 +93,11 @@ class BaseService:
 
         # Forward format data
         self.forward_format = pd.read_csv(f"{self.folder}/forwardFormat.csv")
-
+        
         # Payment service data
         self.info_reg = pd.read_csv(f"{self.folder}/infoReg.csv")
         self.bank_map = pd.read_csv(f"{self.folder}/bankMap.csv")
-
+        
         # Cache all loaded data
         BaseService._data_cache = {
             'folder': self.folder,

@@ -13,35 +13,28 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
-# Create FastAPI app
 app = FastAPI(
     title="Email Processing API",
     description="FastAPI application for email categorization and forwarding",
     version="1.0.0"
 )
 
-# Add session middleware
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "your-secret-key"))
 
-# Exception handler for JWT expiration
 @app.exception_handler(HTTPException)
 async def auth_exception_handler(request: Request, exc: HTTPException):
     """Handle authentication exceptions by redirecting to login"""
     if exc.status_code == 401 and ("Token has expired" in exc.detail or "Not authenticated" in exc.detail):
-        # Clear session for expired tokens
         request.session.clear()
         return RedirectResponse(url="/login", status_code=302)
-    # Re-raise other HTTP exceptions
+
     raise exc
 
-# Mount static files
 if os.path.exists(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-# Setup templates
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
-# Include API routers
 from .api.auth import router as auth_router
 from .api.category import router as category_router
 from .api.forward import router as forward_router

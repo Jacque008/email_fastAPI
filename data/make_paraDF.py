@@ -126,6 +126,9 @@ stopWords_dict = {
         r'Information Ifs telefontider.\s+',
         r'\[Warning\] - This is an external email, please be cautious when opening links and attachments!',
         r'Skickat från Outlook',
+        r'Direktregleringsportalen\nVerifiera din e-post hos Direktregleringsportalen',
+        r'Dina Försäkring AB\s+Industrigatan 23, 262 66 Ängelholm',
+        r'Skadereglerare\s+Dina Försäkring AB',
         r'Från:.*\nSkickat:.*\nTill:.*\nÄmne:.*(?=\n)', 
         r'Från:.*\nDatum:.*\nTill:.*\nÄmne:.*(?=\n)',
         r'From:.*\nSent:.*\nTo:.*\nSubject:.*(?=\n)', 
@@ -134,13 +137,14 @@ stopWords_dict = {
         r'(?<=\n)På[\d\wåöä\-: ]+CEST skrev\s+[\wÅÖÄåöä\-\.\s]+(DRP)?\s*(<.*@.*>)?:?(?=\n)',
         r'(?<=\n)[\d\wåöä\-:\. ]+skrev[\wÅÖÄåöä\-\.\s]+DRP\s*(<.*@.*>)?:(?=\n)',
         r'(?<=\n)[\d\-:\. ]+skrev[\wÅÖÄåöä\-\.\s]+(DRP|Direktregleringsportalen):(?=\n)', 
+        r'(?<=\n)[\w\-:\. ]+skrev (?=DRP|Direktregleringsportalen).*?(?=:\n)',
         r'(?<=\n)Den[\wåöä\d:<>@\.\s]+skrev:(?=\n)',
         r'(?<=\n)On .*? wrote:',
         r'\sHälsningar,?\s',
         r'\s(Vänligen|Hälsar),?\n',
         r'\sVänligen,\s',
         ]}
-# make_df(stopWords_dict, "stopWords")
+make_df(stopWords_dict, "stopWords")
 
 #  ****************  1_4_7. Forward_Words  ****************
 forwardWords_dict = {
@@ -154,7 +158,8 @@ forwardWords_dict = {
         r'(?<=\n)Den[\d\wåöä\-:\.,+(kl) ]+skrev[\wÅÖÄåöä\-\.\s]+(DRP)? *(<.*@.*>)?:?(?=\n)'
         r'(?<=\n)På[\d\wåöä\-: ]+CEST skrev\s+[\wÅÖÄåöä\-\.\s]+(DRP)?\s*(<.*@.*>)?:?(?=\n)',
         r'(?<=\n)[\d\wåöä\-:\. ]+skrev[\wÅÖÄåöä\-\.\s]+DRP\s*(<.*@.*>)?:(?=\n)',
-        r'(?<=\n)[\d\-:\. ]+skrev[\wÅÖÄåöä\-\.\s]+(DRP|Direktregleringsportalen):(?=\n)',         
+        r'(?<=\n)[\d\-:\. ]+skrev[\wÅÖÄåöä\-\.\s]+(DRP|Direktregleringsportalen):(?=\n)',  
+        r'(?<=\n)[\w\-:\. ]+skrev (?=DRP|Direktregleringsportalen).*?(?=:\n)',     
         r'(?<=\n)Den[\wåöä\d:<>@\.\s]+skrev:(?=\n)',
         r'(?<=\n).*skrev.*(?=\n)',
         r'(?<=\n)On .*? wrote:',
@@ -162,7 +167,7 @@ forwardWords_dict = {
         r'---------- Vidarebefordrat meddelande ---------',
         ]
     }
-# make_df(forwardWords_dict, "forwardWords")
+make_df(forwardWords_dict, "forwardWords")
 
 #  ****************  1_5_7. Forward_Trimming_Template   ****************
 action = [
@@ -423,7 +428,7 @@ queryDict = {
                         e."textHtml" ,
                         e."object" ->> 'Attachments' AS "attachments"
                     FROM email e
-                    WHERE e.id = {EMAILID};'''],
+                    WHERE {COND};'''],
   'errandInfo':['''  SELECT DISTINCT 
                               er.id AS "errandId" ,
                               ic.reference ,
@@ -447,17 +452,30 @@ queryDict = {
                                 ecr."data" ->> 'ownerName' AS "ownerName" ,
                                 ecr."data" ->> 'sender' AS "sender" ,
                                 COALESCE(ecr."data" ->> 'receiver', ecr."data" ->> 'recipient') AS "receiver" ,
+                                fb.id AS "insuranceCompanyId" ,
+                                c.id AS "clinicId" ,
                                 c."linkJournalTenant" ,
+                                a.kind ,
                                 ic."journalNumber" 
                             FROM email e
-                            JOIN email_category_request ecr ON ecr."emailId" = e.id
-                            JOIN clinic c ON ( (((ecr."data" ->> 'source') = 'Clinic') 
+                            LEFT JOIN email_category_request ecr ON ecr."emailId" = e.id
+                            LEFT JOIN clinic c ON ( (((ecr."data" ->> 'source') = 'Clinic') 
                                    AND (c."name" = (ecr."data" ->> 'sender')))
                                  OR (((ecr."data" ->> 'source') = 'Insurance_Company') 
                                    AND (c."name" = COALESCE(ecr."data" ->> 'receiver', ecr."data" ->> 'recipient'))))
+                            LEFT JOIN insurance_company fb ON ((((ecr."data" ->> 'source') = 'Insurance_Company') 
+                                   AND (fb."name" = (ecr."data" ->> 'sender')))
+                                 OR (((ecr."data" ->> 'source') = 'Clinic') 
+                                 AND (fb."name" = COALESCE(ecr."data" ->> 'receiver', ecr."data" ->> 'recipient'))))
                             LEFT JOIN errand er ON e."errandId" = er.id
                             LEFT JOIN insurance_case ic ON ic."errandId" = er.id 
-                            WHERE {CONDITION};'''],
+                            LEFT JOIN animal a ON a.id = ic."animalId" 
+                            WHERE {COND}
+                            ORDER BY e.id DESC;'''],
+  'forwardJournalContact': [''' SELECT id, "name" ,"insuranceCompanyId"
+                                FROM insurance_company_journal_contact
+                                WHERE email NOTNULL
+                                ORDER BY id DESC;'''],
   'payment': [''' SELECT DISTINCT
                       id, 
                       amount , 
