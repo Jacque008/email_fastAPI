@@ -144,6 +144,7 @@ class ReceiverResolver(BaseService):
         exploded = self.set_receiver_fb(exploded)
         exploded = self.set_receiver_drp(exploded)
         exploded = self.set_receiver_finance(exploded)
+        
 
         grouped_df = self._group(exploded)
         result_df = self._finalize(grouped_df)
@@ -186,25 +187,19 @@ class ReceiverResolver(BaseService):
     def set_receiver_clinic(self, exploded: pd.DataFrame) -> pd.DataFrame:
         """Set receiver for Clinic"""
         if not self.clinic_list.empty:
-            exploded = pd.merge(
-                exploded, self.clinic_list[['clinicName', 'clinicEmail']], 
-                left_on='parsedTo', right_on='clinicEmail', how='left'
-            )
+            exploded = exploded.merge(self.clinic_list[['clinicName', 'clinicEmail']], 
+                left_on='parsedTo', right_on='clinicEmail', how='left')
         else:
             exploded['clinicName'] = None
         
-        # Expand matching for unmatched entries using keywords
-        mask = exploded['clinicName'].isna()
-        if mask.any():
-            exploded.loc[mask, 'clinicName'] = (exploded.loc[mask].apply(
-                lambda row: expand_matching_clinic(row['parsedTo'], self.clinic_keyword), axis=1)
-            )
+        mask1 = exploded['clinicName'].isna()
+        if mask1.any():
+            exploded.loc[mask1, 'clinicName'] = (exploded.loc[mask1].apply(
+                lambda row: expand_matching_clinic(row['parsedTo'], self.clinic_keyword), axis=1))
         
-        # Set originReceiver and sendTo
         exploded['originReceiver'] = exploded['clinicName']
         exploded = exploded.drop('clinicName', axis=1)
         
-        # Set sendTo to Clinic for matched entries (excluding source=Clinic)
         mask_clinic = (exploded['originReceiver'].notna()) & (exploded['source'] != 'Clinic')
         exploded.loc[mask_clinic, 'sendTo'] = 'Clinic'
         
@@ -239,7 +234,7 @@ class ReceiverResolver(BaseService):
     def set_receiver_fb(self, exploded: pd.DataFrame) -> pd.DataFrame:
         """Set receiver for Insurance Company - Normal"""
         # Handle normal IC receivers from clinic
-        mask = (exploded['source'] == 'Clinic') & (exploded['sendTo'] == 'Other')
+        mask = (exploded['source'] == 'Clinic') & (exploded['originReceiver'].isna()) & (exploded['captured_fb'].notna())
         if mask.any():
             exploded.loc[mask, 'originReceiver'] = exploded.loc[mask, 'captured_fb']
             exploded.loc[mask, 'sendTo'] = 'Insurance_Company'

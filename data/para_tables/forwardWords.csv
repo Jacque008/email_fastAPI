@@ -8,8 +8,9 @@ id,forwardWords
 7,"(?<=\n)Den[\d\wåöä\-:\.,+(kl) ]+skrev[\wÅÖÄåöä\-\.\s]+(DRP)? *(<.*@.*>)?:?(?=\n)(?<=\n)På[\d\wåöä\-: ]+CEST skrev\s+[\wÅÖÄåöä\-\.\s]+(DRP)?\s*(<.*@.*>)?:?(?=\n)"
 8,(?<=\n)[\d\wåöä\-:\. ]+skrev[\wÅÖÄåöä\-\.\s]+DRP\s*(<.*@.*>)?:(?=\n)
 9,(?<=\n)[\d\-:\. ]+skrev[\wÅÖÄåöä\-\.\s]+(DRP|Direktregleringsportalen):(?=\n)
-10,(?<=\n)Den[\wåöä\d:<>@\.\s]+skrev:(?=\n)
-11,(?<=\n).*skrev.*(?=\n)
-12,(?<=\n)On .*? wrote:
-13,---------- Forwarded message ---------
-14,---------- Vidarebefordrat meddelande ---------
+10,(?<=\n)[\w\-:\. ]+skrev (?=DRP|Direktregleringsportalen).*?(?=:\n)
+11,(?<=\n)Den[\wåöä\d:<>@\.\s]+skrev:(?=\n)
+12,(?<=\n).*skrev.*(?=\n)
+13,(?<=\n)On .*? wrote:
+14,---------- Forwarded message ---------
+15,---------- Vidarebefordrat meddelande ---------

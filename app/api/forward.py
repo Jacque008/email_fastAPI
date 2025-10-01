@@ -51,18 +51,24 @@ async def process_forward_email(
             forward = ForwardingOut(id=forwarding_request.id)
         else:
             result_data = result_df.iloc[0].to_dict()
-            clean_data = {k: v for k, v in result_data.items() if pd.notna(v) and v != ''}
-            clean_data.setdefault('id', forwarding_request.id)
-            clean_data.setdefault('action', 'forwarding')
-            clean_data.setdefault('forward_address', '')
-            clean_data.setdefault('forward_subject', '')
-            clean_data.setdefault('forward_text', None)
-            clean_data.setdefault('journal_data', None)
-            forward = ForwardingOut(**clean_data)
 
-        # Convert to dict and filter out None values for template
+            if 'error' in result_data and pd.notna(result_data['error']):
+                forward = ForwardingOut(
+                    id=result_data.get('id', forwarding_request.id),
+                    error=result_data['error']
+                )
+            else:
+                clean_data = {k: v for k, v in result_data.items() if pd.notna(v) and v != ''}
+                clean_data.setdefault('id', forwarding_request.id)
+                clean_data.setdefault('action', '')
+                clean_data.setdefault('forward_address', '')
+                clean_data.setdefault('forward_subject', '')
+                clean_data.setdefault('forward_text', None)
+                clean_data.setdefault('journal_data', None)
+                forward = ForwardingOut(**clean_data)
+
         result_dict = forward.to_dict()
-        filtered_result = {k: v for k, v in result_dict.items() if v is not None}
+        filtered_result = {k: v for k, v in result_dict.items() if v is not None and v != ''}
 
         return templates.TemplateResponse("forward.html", {
             "request": request,
@@ -89,7 +95,6 @@ async def forwarding_api(
     [{\"id\": 123, \"userId\": 456}]
     """
     try:
-        # Check that exactly one record is provided
         if not forwarding_data:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -109,24 +114,28 @@ async def forwarding_api(
         if result_df.empty:
             forward = ForwardingOut(id=forwarding_data[0].id)
             result_dict = forward.to_dict()
-            # Remove None fields from the result
             filtered_result = {k: v for k, v in result_dict.items() if v is not None}
             return [filtered_result]
         else:
             result_data = result_df.iloc[0].to_dict()
-            clean_data = {k: v for k, v in result_data.items() if pd.notna(v) and v != ''}
 
-            # Ensure required fields exist
-            clean_data.setdefault('action', 'Vidarebefordra')
-            clean_data.setdefault('forward_address', '')
-            clean_data.setdefault('forward_subject', '')
-            clean_data.setdefault('forward_text', None)
-            clean_data.setdefault('journal_data', None)
-            forward = ForwardingOut(**clean_data)
+            if 'error' in result_data and pd.notna(result_data['error']):
+                forward = ForwardingOut(
+                    id=result_data.get('id', forwarding_data[0].id),
+                    error=result_data['error']
+                )
+            else:
+                clean_data = {k: v for k, v in result_data.items() if pd.notna(v) and v != ''}
+                clean_data.setdefault('action', '')
+                clean_data.setdefault('forward_address', '')
+                clean_data.setdefault('forward_subject', '')
+                clean_data.setdefault('forward_text', None)
+                clean_data.setdefault('journal_data', None)
+                forward = ForwardingOut(**clean_data)
+
             result_dict = forward.to_dict()
-            # Remove None fields from the result
-            # filtered_result = {k: v for k, v in result_dict.items() if v is not None}
-            return [result_dict]
+            filtered_result = {k: v for k, v in result_dict.items() if v is not None and v != ''}
+            return [filtered_result]
 
     except Exception as e:
         raise HTTPException(

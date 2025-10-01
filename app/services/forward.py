@@ -22,12 +22,8 @@ class ForwardService(BaseService):
     
     def _setup_generation_configs(self):
         try:
-            fw_cates = self.forward_suggestion[self.forward_suggestion['action'].str.endswith('_Template')].action.to_list()
-            self.fw_cates = [item.replace('_Template', '') for item in fw_cates]
             self.trun_list = self.forward_suggestion[self.forward_suggestion['action']=='Trim'].templates.to_list()
             self.sub_list = self.forward_suggestion[self.forward_suggestion['action']=='Subject'].templates.to_list()
-            # Use cached forward_format instead of reading directly
-            # self.forward_format is already available from BaseService
             self.request_fw_sub = self.forward_suggestion[self.forward_suggestion['action']=='Forward_Subject'].templates.to_list()
         except Exception as e:
             print(f"❌ Error in _setup_generation_configs: {str(e)}")
@@ -84,7 +80,7 @@ class ForwardService(BaseService):
                            'Complement_DR_Insurance_Company', 'Complement_DR_Clinic'):
                 return template.format(REFERENCE=kwargs.get('reference', ''))
             elif category in ('Question', 'Message'):
-                return template.format(WHO=kwargs.get('sender', ''))
+                return template.format(WHO=kwargs.get('sender', 'avsändaren'))
             else:
                 return template
         except:
@@ -227,15 +223,12 @@ class ForwardService(BaseService):
     def _generate_category_specific_content(self, template: str, text: str, info: str, 
                                           admin: str, category: str, row_data: Dict) -> str:
         """Generate content based on specific category"""
-        sender = row_data.get('sender', '') or row_data.get('from', '') or 'Okänd avsändare'
-        ref = row_data.get('reference', '') or ''
-        
-        # Ensure we have fallback values for template formatting
-        sender = sender if sender else 'Okänd avsändare'
+        sender = row_data.get('sender') or 'avsändaren'
+        ref = row_data.get('reference') or ''
         admin = admin if admin else 'Admin'
         text = text if text else 'Inget innehåll tillgängligt'
         info = info if info else 'Ingen ytterligare information'
-        
+
         try:
             if category in ('Wisentic_Error', 'Insurance_Validation_Error'):
                 return template.format(WHO=sender, EMAIL=text, INFO=info, ADMIN=admin)
@@ -255,7 +248,7 @@ class ForwardService(BaseService):
                 return template.format(WHO=sender, EMAIL=text, ADMIN=admin)
                 
             elif category == 'Question':
-                reference = f"eller skicka ett mail med kompletteringen till {ref} " if ref else ""
+                reference = f"eller skicka ett mail med kompletteringen till {ref}" if ref else ""
                 return template.format(REFERENCE=reference, WHO=sender, EMAIL=text, INFO=info, ADMIN=admin)
             
             elif category == 'Message':
